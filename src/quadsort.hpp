@@ -1,6 +1,7 @@
 // quadsort 1.2.1.3 - Igor van den Hoven ivdhoven@gmail.com
 
 #include <cstring>
+#include <type_traits>
 
 // utilize branchless ternary operations in clang
 

@@ -6,6 +6,31 @@
 #include <cstring>     // for std::memcpy, std::memmove, std::memset
 #include <type_traits>
 
+// universal copy functions to handle both trivially and nontrivially copyable types
+
+#define scandum_copy_range(T, output, input, length) \
+	if constexpr (std::is_trivially_copyable_v<T> && \
+		std::is_same_v<decltype(input), T*> && \
+		std::is_same_v<decltype(output), T*>) \
+	{ \
+		std::memcpy(output, input, (length) * sizeof(T)); \
+	} \
+	else \
+	{ \
+		std::copy(input, (input) + (length), output); \
+	}
+
+#define scandum_copy_overlapping_range(T, output, input, length) \
+	if constexpr (std::is_trivially_copyable_v<T> && std::is_same_v<decltype(input), T*>) \
+	{ \
+		std::memmove(output, input, (length) * sizeof(T)); \
+	} \
+	else \
+	{ \
+		std::copy_backward(input, (input) + (length), output); \
+	}
+
+
 // utilize branchless ternary operations in clang
 
 #if !defined __clang__
@@ -592,14 +617,14 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 		{
 			ptl8_ptr: if (cmp(*(ptl + 7), *ptr) <= 0)
 			{
-				std::memcpy(ptd, ptl, 8 * sizeof(T)); ptd += 8; ptl += 8;
+				scandum_copy_range(T, ptd, ptl, 8); ptd += 8; ptl += 8;
 
 				if (tpl - ptl > 8) {goto ptl8_ptr;} continue;
 			}
 
 			tpl8_tpr: if (cmp(*(tpl - 7), *tpr) > 0)
 			{
-				tpd -= 7; tpl -= 7; std::memcpy(tpd--, tpl--, 8 * sizeof(T));
+				tpd -= 7; tpl -= 7; scandum_copy_range(T, tpd--, tpl--, 8);
 
 				if (tpl - ptl > 8) {goto tpl8_tpr;} continue;
 			}
@@ -609,14 +634,14 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 		{
 			ptl_ptr8: if (cmp(*ptl, *(ptr + 7)) > 0)
 			{
-				std::memcpy(ptd, ptr, 8 * sizeof(T)); ptd += 8; ptr += 8;
+				scandum_copy_range(T, ptd, ptr, 8); ptd += 8; ptr += 8;
 
 				if (tpr - ptr > 8) {goto ptl_ptr8;} continue;
 			}
 
 			tpl_tpr8: if (cmp(*tpl, *(tpr - 7)) <= 0)
 			{
-				tpd -= 7; tpr -= 7; std::memcpy(tpd--, tpr--, 8 * sizeof(T));
+				tpd -= 7; tpr -= 7; scandum_copy_range(T, tpd--, tpr--, 8);
 
 				if (tpr - ptr > 8) {goto tpl_tpr8;} continue;
 			}
@@ -680,17 +705,17 @@ void quad_merge_block(Iterator array, T* swap, size_t block, Compare cmp)
 			cross_merge(swap + block_x_2, pt2, block, block, cmp);
 			break;
 		case 1:
-			std::memcpy(swap, array, block_x_2 * sizeof(T));
+			scandum_copy_range(T, swap, array, block_x_2);
 			cross_merge(swap + block_x_2, pt2, block, block, cmp);
 			break;
 		case 2:
 			cross_merge(swap, array, block, block, cmp);
-			std::memcpy(swap + block_x_2, pt2, block_x_2 * sizeof(T));
+			scandum_copy_range(T, swap + block_x_2, pt2, block_x_2);
 			break;
 		case 3:
 			if (cmp(*(pt2 - 1), *pt2) <= 0)
 				return;
-			std::memcpy(swap, array, block_x_2 * 2 * sizeof(T));
+			scandum_copy_range(T, swap, array, block_x_2 * 2);
 	}
 	cross_merge(array, swap, block_x_2, block_x_2, cmp);
 }
@@ -746,7 +771,7 @@ void partial_forward_merge(Iterator array, T* swap, size_t swap_size, size_t nme
 		return;
 	}
 
-	std::memcpy(swap, array, block * sizeof(T));
+	scandum_copy_range(T, swap, array, block);
 
 	ptl = swap;
 	tpl = swap + block - 1;
@@ -824,12 +849,12 @@ void partial_backward_merge(Iterator array, T* swap, size_t swap_size, size_t nm
 	{
 		cross_merge(swap, array, block, right, cmp);
 
-		std::memcpy(array, swap, nmemb * sizeof(T));
+		scandum_copy_range(T, array, swap, nmemb);
 
 		return;
 	}
 
-	std::memcpy(swap, array + block, right * sizeof(T));
+	scandum_copy_range(T, swap, array + block, right);
 
 	tpr = swap + right - 1;
 
@@ -931,9 +956,9 @@ void trinity_rotation(Iterator array, T* swap, size_t swap_size, size_t nmemb, s
 	{
 		if (left <= swap_size)
 		{
-			std::memcpy(swap, array, left * sizeof(T));
-			std::memmove(array, array + left, right * sizeof(T));
-			std::memcpy(array + right, swap, left * sizeof(T));
+			scandum_copy_range(T, swap, array, left);
+			scandum_copy_overlapping_range(T, array, array + left, right);
+			scandum_copy_range(T, array + right, swap, left);
 		}
 		else
 		{
@@ -949,13 +974,13 @@ void trinity_rotation(Iterator array, T* swap, size_t swap_size, size_t nmemb, s
 				ptc = pta + right;
 				ptd = ptc + left;
 
-				std::memcpy(swap, ptb, bridge * sizeof(T));
+				scandum_copy_range(T, swap, ptb, bridge);
 
 				while (left--)
 				{
 					*--ptc = *--ptd; *ptd = *--ptb;
 				}
-				std::memcpy(pta, swap, bridge * sizeof(T));
+				scandum_copy_range(T, pta, swap, bridge);
 			}
 			else
 			{
@@ -989,9 +1014,9 @@ void trinity_rotation(Iterator array, T* swap, size_t swap_size, size_t nmemb, s
 	{
 		if (right <= swap_size)
 		{
-			std::memcpy(swap, array + left, right * sizeof(T));
-			std::memmove(array + right, array, left * sizeof(T));
-			std::memcpy(array, swap, right * sizeof(T));
+			scandum_copy_range(T, swap, array + left, right);
+			scandum_copy_overlapping_range(T, array + right, array, left);
+			scandum_copy_range(T, array, swap, right);
 		}
 		else
 		{
@@ -1007,13 +1032,13 @@ void trinity_rotation(Iterator array, T* swap, size_t swap_size, size_t nmemb, s
 				ptc = pta + right;
 				ptd = ptc + left;
 
-				std::memcpy(swap, ptc, bridge * sizeof(T));
+				scandum_copy_range(T, swap, ptc, bridge);
 
 				while (right--)
 				{
 					*ptc++ = *pta; *pta++ = *ptb++;
 				}
-				std::memcpy(ptd - bridge, swap, bridge * sizeof(T));
+				scandum_copy_range(T, ptd - bridge, swap, bridge);
 			}
 			else
 			{
@@ -1104,9 +1129,9 @@ void rotate_merge_block(Iterator array, T* swap, size_t swap_size, size_t lblock
 	{
 		if (lblock + left <= swap_size)
 		{
-			std::memcpy(swap, array, lblock * sizeof(T));
-			std::memcpy(swap + lblock, array + lblock + rblock, left * sizeof(T));
-			std::memmove(array + lblock + left, array + lblock, rblock * sizeof(T));
+			scandum_copy_range(T, swap, array, lblock);
+			scandum_copy_range(T, swap + lblock, array + lblock + rblock, left);
+			scandum_copy_overlapping_range(T, array + lblock + left, array + lblock, rblock);
 
 			cross_merge(array, swap, lblock, left, cmp);
 		}

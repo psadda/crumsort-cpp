@@ -322,8 +322,8 @@ size_t fulcrum_default_partition(Iterator array, T* swap, Iterator ptx, T* piv, 
 	size_t i, cnt, val, m = 0;
 	Iterator ptl, ptr, pta, tpa;
 
-	std::memcpy(swap, array, 32 * sizeof(T));
-	std::memcpy(swap + 32, array + nmemb - 32, 32 * sizeof(T));
+	scandum_copy_range(T, swap, array, 32);
+	scandum_copy_range(T, swap + 32, array + nmemb - 32, 32);
 
 	ptl = array;
 	ptr = array + nmemb - 1;
@@ -389,8 +389,8 @@ size_t fulcrum_reverse_partition(Iterator array, T* swap, Iterator ptx, T* piv, 
 	size_t i, cnt, val, m = 0;
 	T* ptl, *ptr, *pta, *tpa;
 
-	std::memcpy(swap, array, 32 * sizeof(T));
-	std::memcpy(swap + 32, array + nmemb - 32, 32 * sizeof(T));
+	scandum_copy_range(T, swap, array, 32);
+	scandum_copy_range(T, swap + 32, array + nmemb - 32, 32);
 
 	ptl = array;
 	ptr = array + nmemb - 1;

@@ -48,6 +48,7 @@ Progress
 - [ ] Support nontrivial types (requires removing uses of `memcpy`, `memmove`, `memset`)
 - [ ] Support non-default-constructible types
 - [ ] Support move only types
+- [ ] Use a less-than predicate instead of a greater-than predicate
 
 License
 -------

@@ -1,16 +1,96 @@
 // quadsort 1.2.1.3 - Igor van den Hoven ivdhoven@gmail.com
 
+// utilize branchless ternary operations in clang
+
+#if !defined __clang__
+#define head_branchless_merge(ptd, x, ptl, ptr, cmp)  \
+	x = cmp(*ptl, *ptr) <= 0;  \
+	*ptd = *ptl;  \
+	ptl += x;  \
+	ptd[x] = *ptr;  \
+	ptr += !x;  \
+	ptd++;
+#else
+#define head_branchless_merge(ptd, x, ptl, ptr, cmp)  \
+	*ptd++ = cmp(*ptl, *ptr) <= 0 ? *ptl++ : *ptr++;
+#endif
+
+#if !defined __clang__
+#define tail_branchless_merge(tpd, y, tpl, tpr, cmp)  \
+	y = cmp(*tpl, *tpr) <= 0;  \
+	*tpd = *tpl;  \
+	tpl -= !y;  \
+	tpd--;  \
+	tpd[y] = *tpr;  \
+	tpr -= y;
+#else
+#define tail_branchless_merge(tpd, x, tpl, tpr, cmp)  \
+	*tpd-- = cmp(*tpl, *tpr) > 0 ? *tpl-- : *tpr--;
+#endif
+
+// guarantee small parity merges are inlined with minimal overhead
+
+#define parity_merge_two(array, swap, x, ptl, ptr, pts, cmp)  \
+	ptl = array; ptr = array + 2; pts = swap;  \
+	head_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	*pts = cmp(*ptl, *ptr) <= 0 ? *ptl : *ptr;  \
+  \
+	ptl = array + 1; ptr = array + 3; pts = swap + 3;  \
+	tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	*pts = cmp(*ptl, *ptr)  > 0 ? *ptl : *ptr;
+
+#define parity_merge_four(array, swap, x, ptl, ptr, pts, cmp)  \
+	ptl = array + 0; ptr = array + 4; pts = swap;  \
+	head_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	head_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	head_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	*pts = cmp(*ptl, *ptr) <= 0 ? *ptl : *ptr;  \
+  \
+	ptl = array + 3; ptr = array + 7; pts = swap + 7;  \
+	tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	*pts = cmp(*ptl, *ptr)  > 0 ? *ptl : *ptr;
+
+
+#if !defined __clang__
+#define branchless_swap(pta, swap, x, cmp)  \
+	x = cmp(*pta, *(pta + 1)) > 0;  \
+	swap = pta[!x];  \
+	pta[0] = pta[x];  \
+	pta[1] = swap;
+#else
+#define branchless_swap(pta, swap, x, cmp)  \
+	x = 0;  \
+	swap = cmp(*pta, *(pta + 1)) > 0 ? pta[x++] : pta[1];  \
+	pta[0] = pta[x];  \
+	pta[1] = swap;
+#endif
+
+#define swap_branchless(pta, swap, x, y, cmp)  \
+	x = cmp(*pta, *(pta + 1)) > 0;  \
+	y = !x;  \
+	swap = pta[y];  \
+	pta[0] = pta[x];  \
+	pta[1] = swap;
+
+
+namespace scandum {
+
+namespace detail {
+
 // the next seven functions are used for sorting 0 to 31 elements
 
-void FUNC(parity_swap_four)(VAR *array, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void parity_swap_four(T* array, Compare cmp)
 {
-	VAR tmp, *pta = array;
+	T tmp, *pta = array;
 	size_t x;
 
 	branchless_swap(pta, tmp, x, cmp); pta += 2;
 	branchless_swap(pta, tmp, x, cmp); pta--;
 
-	if (cmp(pta, pta + 1) > 0)
+	if (cmp(*pta, *(pta + 1)) > 0)
 	{
 		tmp = pta[0]; pta[0] = pta[1]; pta[1] = tmp; pta--;
 
@@ -20,9 +100,10 @@ void FUNC(parity_swap_four)(VAR *array, CMPFUNC *cmp)
 	}
 }
 
-void FUNC(parity_swap_five)(VAR *array, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void parity_swap_five(T* array, Compare cmp)
 {
-	VAR tmp, *pta = array;
+	T tmp, *pta = array;
 	size_t x, y;
 
 	branchless_swap(pta, tmp, x, cmp); pta += 2;
@@ -41,9 +122,10 @@ void FUNC(parity_swap_five)(VAR *array, CMPFUNC *cmp)
 	}
 }
 
-void FUNC(parity_swap_six)(VAR *array, VAR *swap, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void parity_swap_six(T* array, T* swap, Compare cmp)
 {
-	VAR tmp, *pta = array, *ptl, *ptr;
+	T tmp, *pta = array, *ptl, *ptr;
 	size_t x, y;
 
 	branchless_swap(pta, tmp, x, cmp); pta++;
@@ -51,14 +133,14 @@ void FUNC(parity_swap_six)(VAR *array, VAR *swap, CMPFUNC *cmp)
 	branchless_swap(pta, tmp, x, cmp); pta--;
 	branchless_swap(pta, tmp, x, cmp); pta = array;
 
-	if (cmp(pta + 2, pta + 3) <= 0)
+	if (cmp(*(pta + 2), *(pta + 3)) <= 0)
 	{
 		branchless_swap(pta, tmp, x, cmp); pta += 4;
 		branchless_swap(pta, tmp, x, cmp);
 		return;
 	}
-	x = cmp(pta, pta + 1) > 0; y = !x; swap[0] = pta[x]; swap[1] = pta[y]; swap[2] = pta[2]; pta += 4;
-	x = cmp(pta, pta + 1) > 0; y = !x; swap[4] = pta[x]; swap[5] = pta[y]; swap[3] = pta[-1];
+	x = cmp(*pta, *(pta + 1)) > 0; y = !x; swap[0] = pta[x]; swap[1] = pta[y]; swap[2] = pta[2]; pta += 4;
+	x = cmp(*pta, *(pta + 1)) > 0; y = !x; swap[4] = pta[x]; swap[5] = pta[y]; swap[3] = pta[-1];
 
 	pta = array; ptl = swap; ptr = swap + 3;
 
@@ -70,12 +152,13 @@ void FUNC(parity_swap_six)(VAR *array, VAR *swap, CMPFUNC *cmp)
 
 	tail_branchless_merge(pta, y, ptl, ptr, cmp);
 	tail_branchless_merge(pta, y, ptl, ptr, cmp);
-	*pta = cmp(ptl, ptr)  > 0 ? *ptl : *ptr;
+	*pta = cmp(*ptl, *ptr)  > 0 ? *ptl : *ptr;
 }
 
-void FUNC(parity_swap_seven)(VAR *array, VAR *swap, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void parity_swap_seven(T* array, T* swap, Compare cmp)
 {
-	VAR tmp, *pta = array, *ptl, *ptr;
+	T tmp, *pta = array, *ptl, *ptr;
 	size_t x, y;
 
 	branchless_swap(pta, tmp, x, cmp); pta += 2;
@@ -89,9 +172,9 @@ void FUNC(parity_swap_seven)(VAR *array, VAR *swap, CMPFUNC *cmp)
 
 	branchless_swap(pta, tmp, x, cmp); pta = array;
 
-	x = cmp(pta, pta + 1) > 0; swap[0] = pta[x]; swap[1] = pta[!x]; swap[2] = pta[2]; pta += 3;
-	x = cmp(pta, pta + 1) > 0; swap[3] = pta[x]; swap[4] = pta[!x]; pta += 2;
-	x = cmp(pta, pta + 1) > 0; swap[5] = pta[x]; swap[6] = pta[!x];
+	x = cmp(*pta, *(pta + 1)) > 0; swap[0] = pta[x]; swap[1] = pta[!x]; swap[2] = pta[2]; pta += 3;
+	x = cmp(*pta, *(pta + 1)) > 0; swap[3] = pta[x]; swap[4] = pta[!x]; pta += 2;
+	x = cmp(*pta, *(pta + 1)) > 0; swap[5] = pta[x]; swap[6] = pta[!x];
 
 	pta = array; ptl = swap; ptr = swap + 3;
 
@@ -104,12 +187,13 @@ void FUNC(parity_swap_seven)(VAR *array, VAR *swap, CMPFUNC *cmp)
 	tail_branchless_merge(pta, y, ptl, ptr, cmp);
 	tail_branchless_merge(pta, y, ptl, ptr, cmp);
 	tail_branchless_merge(pta, y, ptl, ptr, cmp);
-	*pta = cmp(ptl, ptr) > 0 ? *ptl : *ptr;
+	*pta = cmp(*ptl, *ptr) > 0 ? *ptl : *ptr;
 }
 
-void FUNC(tiny_sort)(VAR *array, VAR *swap, size_t nmemb, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void tiny_sort(T* array, T* swap, size_t nmemb, Compare cmp)
 {
-	VAR tmp;
+	T tmp;
 	size_t x;
 
 	switch (nmemb)
@@ -126,25 +210,26 @@ void FUNC(tiny_sort)(VAR *array, VAR *swap, size_t nmemb, CMPFUNC *cmp)
 			branchless_swap(array, tmp, x, cmp);
 			return;
 		case 4:
-			FUNC(parity_swap_four)(array, cmp);
+			parity_swap_four(array, cmp);
 			return;
 		case 5:
-			FUNC(parity_swap_five)(array, cmp);
+			parity_swap_five(array, cmp);
 			return;
 		case 6:
-			FUNC(parity_swap_six)(array, swap, cmp);
+			parity_swap_six(array, swap, cmp);
 			return;
 		case 7:
-			FUNC(parity_swap_seven)(array, swap, cmp);
+			parity_swap_seven(array, swap, cmp);
 			return;
 	}
 }
 
 // left must be equal or one smaller than right
 
-void FUNC(parity_merge)(VAR *dest, VAR *from, size_t left, size_t right, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void parity_merge(T* dest, T* from, size_t left, size_t right, Compare cmp)
 {
-	VAR *ptl, *ptr, *tpl, *tpr, *tpd, *ptd;
+	T *ptl, *ptr, *tpl, *tpr, *tpd, *ptd;
 #if !defined __clang__
 	size_t x, y;
 #endif
@@ -157,17 +242,17 @@ void FUNC(parity_merge)(VAR *dest, VAR *from, size_t left, size_t right, CMPFUNC
 
 	if (left < right)
 	{
-		*ptd++ = cmp(ptl, ptr) <= 0 ? *ptl++ : *ptr++;
+		*ptd++ = cmp(*ptl, *ptr) <= 0 ? *ptl++ : *ptr++;
 	}
-	*ptd++ = cmp(ptl, ptr) <= 0 ? *ptl++ : *ptr++;
+	*ptd++ = cmp(*ptl, *ptr) <= 0 ? *ptl++ : *ptr++;
 
 #if !defined cmp && !defined __clang__ // cache limit workaround for gcc
 	if (left > QUAD_CACHE)
 	{
 		while (--left)
 		{
-			*ptd++ = cmp(ptl, ptr) <= 0 ? *ptl++ : *ptr++;
-			*tpd-- = cmp(tpl, tpr)  > 0 ? *tpl-- : *tpr--;
+			*ptd++ = cmp(*ptl, *ptr) <= 0 ? *ptl++ : *ptr++;
+			*tpd-- = cmp(*tpl, *tpr)  > 0 ? *tpl-- : *tpr--;
 		}
 	}
 	else
@@ -179,14 +264,15 @@ void FUNC(parity_merge)(VAR *dest, VAR *from, size_t left, size_t right, CMPFUNC
 			tail_branchless_merge(tpd, y, tpl, tpr, cmp);
 		}
 	}
-	*tpd = cmp(tpl, tpr)  > 0 ? *tpl : *tpr;
+	*tpd = cmp(*tpl, *tpr)  > 0 ? *tpl : *tpr;
 }
 
-void FUNC(tail_swap)(VAR *array, VAR *swap, size_t nmemb, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void tail_swap(T* array, T* swap, size_t nmemb, Compare cmp)
 {
 	if (nmemb < 8)
 	{
-		FUNC(tiny_sort)(array, swap, nmemb, cmp);
+		tiny_sort(array, swap, nmemb, cmp);
 		return;
 	}
 	size_t quad1, quad2, quad3, quad4, half1, half2;
@@ -198,27 +284,28 @@ void FUNC(tail_swap)(VAR *array, VAR *swap, size_t nmemb, CMPFUNC *cmp)
 	quad3 = half2 / 2;
 	quad4 = half2 - quad3;
 
-	VAR *pta = array;
+	T* pta = array;
 
-	FUNC(tail_swap)(pta, swap, quad1, cmp); pta += quad1;
-	FUNC(tail_swap)(pta, swap, quad2, cmp); pta += quad2;
-	FUNC(tail_swap)(pta, swap, quad3, cmp); pta += quad3;
-	FUNC(tail_swap)(pta, swap, quad4, cmp);
+	tail_swap(pta, swap, quad1, cmp); pta += quad1;
+	tail_swap(pta, swap, quad2, cmp); pta += quad2;
+	tail_swap(pta, swap, quad3, cmp); pta += quad3;
+	tail_swap(pta, swap, quad4, cmp);
 
-	if (cmp(array + quad1 - 1, array + quad1) <= 0 && cmp(array + half1 - 1, array + half1) <= 0 && cmp(pta - 1, pta) <= 0)
+	if (cmp(*(array + quad1 - 1), *(array + quad1)) <= 0 && cmp(*(array + half1 - 1), *(array + half1)) <= 0 && cmp(*(pta - 1), *pta) <= 0)
 	{
 		return;
 	}
-	FUNC(parity_merge)(swap, array, quad1, quad2, cmp);
-	FUNC(parity_merge)(swap + half1, array + half1, quad3, quad4, cmp);
-	FUNC(parity_merge)(array, swap, half1, half2, cmp);
+	parity_merge(swap, array, quad1, quad2, cmp);
+	parity_merge(swap + half1, array + half1, quad3, quad4, cmp);
+	parity_merge(array, swap, half1, half2, cmp);
 }
 
 // the next three functions create sorted blocks of 32 elements
 
-void FUNC(quad_reversal)(VAR *pta, VAR *ptz)
+template<typename T>
+void quad_reversal(T* pta, T* ptz)
 {
-	VAR *ptb, *pty, tmp1, tmp2;
+	T* ptb, *pty, tmp1, tmp2;
 
 	size_t loop = (ptz - pta) / 2;
 
@@ -240,9 +327,10 @@ void FUNC(quad_reversal)(VAR *pta, VAR *ptz)
 	while (loop--);
 }
 
-void FUNC(quad_swap_merge)(VAR *array, VAR *swap, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void quad_swap_merge(T* array, T* swap, Compare cmp)
 {
-	VAR *pts, *ptl, *ptr;
+	T* pts, *ptl, *ptr;
 #if !defined __clang__
 	size_t x;
 #endif
@@ -252,13 +340,15 @@ void FUNC(quad_swap_merge)(VAR *array, VAR *swap, CMPFUNC *cmp)
 	parity_merge_four(swap, array, x, ptl, ptr, pts, cmp);
 }
 
-void FUNC(tail_merge)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, size_t block, CMPFUNC *cmp);
+template<typename T, typename Compare>
+void tail_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp);
 
-size_t FUNC(quad_swap)(VAR *array, size_t nmemb, CMPFUNC *cmp)
+template<typename T, typename Compare>
+size_t quad_swap(T* array, size_t nmemb, Compare cmp)
 {
-	VAR tmp, swap[32];
+	T tmp, swap[32];
 	size_t count;
-	VAR *pta, *pts;
+	T* pta, *pts;
 	unsigned char v1, v2, v3, v4, x;
 	pta = array;
 
@@ -266,23 +356,23 @@ size_t FUNC(quad_swap)(VAR *array, size_t nmemb, CMPFUNC *cmp)
 
 	while (count--)
 	{
-		v1 = cmp(pta + 0, pta + 1) > 0;
-		v2 = cmp(pta + 2, pta + 3) > 0;
-		v3 = cmp(pta + 4, pta + 5) > 0;
-		v4 = cmp(pta + 6, pta + 7) > 0;
+		v1 = cmp(*(pta + 0), *(pta + 1)) > 0;
+		v2 = cmp(*(pta + 2), *(pta + 3)) > 0;
+		v3 = cmp(*(pta + 4), *(pta + 5)) > 0;
+		v4 = cmp(*(pta + 6), *(pta + 7)) > 0;
 
 		switch (v1 + v2 * 2 + v3 * 4 + v4 * 8)
 		{
 			case 0:
-				if (cmp(pta + 1, pta + 2) <= 0 && cmp(pta + 3, pta + 4) <= 0 && cmp(pta + 5, pta + 6) <= 0)
+				if (cmp(*(pta + 1), *(pta + 2)) <= 0 && cmp(*(pta + 3), *(pta + 4)) <= 0 && cmp(*(pta + 5), *(pta + 6)) <= 0)
 				{
 					goto ordered;
 				}
-				FUNC(quad_swap_merge)(pta, swap, cmp);
+				quad_swap_merge(pta, swap, cmp);
 				break;
 
 			case 15:
-				if (cmp(pta + 1, pta + 2) > 0 && cmp(pta + 3, pta + 4) > 0 && cmp(pta + 5, pta + 6) > 0)
+				if (cmp(*(pta + 1), *(pta + 2)) > 0 && cmp(*(pta + 3), *(pta + 4)) > 0 && cmp(*(pta + 5), *(pta + 6)) > 0)
 				{
 					pts = pta;
 					goto reversed;
@@ -295,7 +385,7 @@ size_t FUNC(quad_swap)(VAR *array, size_t nmemb, CMPFUNC *cmp)
 				x = !v3; tmp = pta[x]; pta[0] = pta[v3]; pta[1] = tmp; pta += 2;
 				x = !v4; tmp = pta[x]; pta[0] = pta[v4]; pta[1] = tmp; pta -= 6;
 
-				FUNC(quad_swap_merge)(pta, swap, cmp);
+				quad_swap_merge(pta, swap, cmp);
 		}
 		pta += 8;
 
@@ -307,20 +397,20 @@ size_t FUNC(quad_swap)(VAR *array, size_t nmemb, CMPFUNC *cmp)
 
 		if (count--)
 		{
-			if ((v1 = cmp(pta + 0, pta + 1) > 0) | (v2 = cmp(pta + 2, pta + 3) > 0) | (v3 = cmp(pta + 4, pta + 5) > 0) | (v4 = cmp(pta + 6, pta + 7) > 0))
+			if ((v1 = cmp(*(pta + 0), *(pta + 1)) > 0) | (v2 = cmp(*(pta + 2), *(pta + 3)) > 0) | (v3 = cmp(*(pta + 4), *(pta + 5)) > 0) | (v4 = cmp(*(pta + 6), *(pta + 7)) > 0))
 			{
-				if (v1 + v2 + v3 + v4 == 4 && cmp(pta + 1, pta + 2) > 0 && cmp(pta + 3, pta + 4) > 0 && cmp(pta + 5, pta + 6) > 0)
+				if (v1 + v2 + v3 + v4 == 4 && cmp(*(pta + 1), *(pta + 2)) > 0 && cmp(*(pta + 3), *(pta + 4)) > 0 && cmp(*(pta + 5), *(pta + 6)) > 0)
 				{
 					pts = pta;
 					goto reversed;
 				}
 				goto not_ordered;
 			}
-			if (cmp(pta + 1, pta + 2) <= 0 && cmp(pta + 3, pta + 4) <= 0 && cmp(pta + 5, pta + 6) <= 0)
+			if (cmp(*(pta + 1), *(pta + 2)) <= 0 && cmp(*(pta + 3), *(pta + 4)) <= 0 && cmp(*(pta + 5), *(pta + 6)) <= 0)
 			{
 				goto ordered;
 			}
-			FUNC(quad_swap_merge)(pta, swap, cmp);
+			quad_swap_merge(pta, swap, cmp);
 			pta += 8;
 			continue;
 		}
@@ -332,24 +422,24 @@ size_t FUNC(quad_swap)(VAR *array, size_t nmemb, CMPFUNC *cmp)
 
 		if (count--)
 		{
-			if ((v1 = cmp(pta + 0, pta + 1) <= 0) | (v2 = cmp(pta + 2, pta + 3) <= 0) | (v3 = cmp(pta + 4, pta + 5) <= 0) | (v4 = cmp(pta + 6, pta + 7) <= 0))
+			if ((v1 = cmp(*(pta + 0), *(pta + 1)) <= 0) | (v2 = cmp(*(pta + 2), *(pta + 3)) <= 0) | (v3 = cmp(*(pta + 4), *(pta + 5)) <= 0) | (v4 = cmp(*(pta + 6), *(pta + 7)) <= 0))
 			{
 				// not reversed
 			}
 			else
 			{
-				if (cmp(pta - 1, pta) > 0 && cmp(pta + 1, pta + 2) > 0 && cmp(pta + 3, pta + 4) > 0 && cmp(pta + 5, pta + 6) > 0)
+				if (cmp(*(pta - 1), *pta) > 0 && cmp(*(pta + 1), *(pta + 2)) > 0 && cmp(*(pta + 3), *(pta + 4)) > 0 && cmp(*(pta + 5), *(pta + 6)) > 0)
 				{
 					goto reversed;
 				}
 			}
-			FUNC(quad_reversal)(pts, pta - 1);
+			quad_reversal(pts, pta - 1);
 
-			if (v1 + v2 + v3 + v4 == 4 && cmp(pta + 1, pta + 2) <= 0 && cmp(pta + 3, pta + 4) <= 0 && cmp(pta + 5, pta + 6) <= 0)
+			if (v1 + v2 + v3 + v4 == 4 && cmp(*(pta + 1), *(pta + 2)) <= 0 && cmp(*(pta + 3), *(pta + 4)) <= 0 && cmp(*(pta + 5), *(pta + 6)) <= 0)
 			{
 				goto ordered;
 			}
-			if (v1 + v2 + v3 + v4 == 0 && cmp(pta + 1, pta + 2)  > 0 && cmp(pta + 3, pta + 4)  > 0 && cmp(pta + 5, pta + 6)  > 0)
+			if (v1 + v2 + v3 + v4 == 0 && cmp(*(pta + 1), *(pta + 2))  > 0 && cmp(*(pta + 3), *(pta + 4))  > 0 && cmp(*(pta + 5), *(pta + 6))  > 0)
 			{
 				pts = pta;
 				goto reversed;
@@ -360,9 +450,9 @@ size_t FUNC(quad_swap)(VAR *array, size_t nmemb, CMPFUNC *cmp)
 			x = !v3; tmp = pta[v3]; pta[0] = pta[x]; pta[1] = tmp; pta += 2;
 			x = !v4; tmp = pta[v4]; pta[0] = pta[x]; pta[1] = tmp; pta -= 6;
 
-			if (cmp(pta + 1, pta + 2) > 0 || cmp(pta + 3, pta + 4) > 0 || cmp(pta + 5, pta + 6) > 0)
+			if (cmp(*(pta + 1), *(pta + 2)) > 0 || cmp(*(pta + 3), *(pta + 4)) > 0 || cmp(*(pta + 5), *(pta + 6)) > 0)
 			{
-				FUNC(quad_swap_merge)(pta, swap, cmp);
+				quad_swap_merge(pta, swap, cmp);
 			}
 			pta += 8;
 			continue;
@@ -370,15 +460,15 @@ size_t FUNC(quad_swap)(VAR *array, size_t nmemb, CMPFUNC *cmp)
 
 		switch (nmemb % 8)
 		{
-			case 7: if (cmp(pta + 5, pta + 6) <= 0) break;
-			case 6: if (cmp(pta + 4, pta + 5) <= 0) break;
-			case 5: if (cmp(pta + 3, pta + 4) <= 0) break;
-			case 4: if (cmp(pta + 2, pta + 3) <= 0) break;
-			case 3: if (cmp(pta + 1, pta + 2) <= 0) break;
-			case 2: if (cmp(pta + 0, pta + 1) <= 0) break;
-			case 1: if (cmp(pta - 1, pta + 0) <= 0) break;
+			case 7: if (cmp(*(pta + 5), *(pta + 6)) <= 0) break;
+			case 6: if (cmp(*(pta + 4), *(pta + 5)) <= 0) break;
+			case 5: if (cmp(*(pta + 3), *(pta + 4)) <= 0) break;
+			case 4: if (cmp(*(pta + 2), *(pta + 3)) <= 0) break;
+			case 3: if (cmp(*(pta + 1), *(pta + 2)) <= 0) break;
+			case 2: if (cmp(*(pta + 0), *(pta + 1)) <= 0) break;
+			case 1: if (cmp(*(pta - 1), *(pta + 0)) <= 0) break;
 			case 0:
-				FUNC(quad_reversal)(pts, pta + nmemb % 8 - 1);
+				quad_reversal(pts, pta + nmemb % 8 - 1);
 
 				if (pts == array)
 				{
@@ -386,10 +476,10 @@ size_t FUNC(quad_swap)(VAR *array, size_t nmemb, CMPFUNC *cmp)
 				}
 				goto reverse_end;
 		}
-		FUNC(quad_reversal)(pts, pta - 1);
+		quad_reversal(pts, pta - 1);
 		break;
 	}
-	FUNC(tail_swap)(pta, swap, nmemb % 8, cmp);
+	tail_swap(pta, swap, nmemb % 8, cmp);
 
 	reverse_end:
 
@@ -397,27 +487,28 @@ size_t FUNC(quad_swap)(VAR *array, size_t nmemb, CMPFUNC *cmp)
 
 	for (count = nmemb / 32 ; count-- ; pta += 32)
 	{
-		if (cmp(pta + 7, pta + 8) <= 0 && cmp(pta + 15, pta + 16) <= 0 && cmp(pta + 23, pta + 24) <= 0)
+		if (cmp(*(pta + 7), *(pta + 8)) <= 0 && cmp(*(pta + 15), *(pta + 16)) <= 0 && cmp(*(pta + 23), *(pta + 24)) <= 0)
 		{
 			continue;
 		}
-		FUNC(parity_merge)(swap, pta, 8, 8, cmp);
-		FUNC(parity_merge)(swap + 16, pta + 16, 8, 8, cmp);
-		FUNC(parity_merge)(pta, swap, 16, 16, cmp);
+		parity_merge(swap, pta, 8, 8, cmp);
+		parity_merge(swap + 16, pta + 16, 8, 8, cmp);
+		parity_merge(pta, swap, 16, 16, cmp);
 	}
 
 	if (nmemb % 32 > 8)
 	{
-		FUNC(tail_merge)(pta, swap, 32, nmemb % 32, 8, cmp);
+		tail_merge(pta, swap, 32, nmemb % 32, 8, cmp);
 	}
 	return 0;
 }
 
 // The next six functions are quad merge support routines
 
-void FUNC(cross_merge)(VAR *dest, VAR *from, size_t left, size_t right, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void cross_merge(T* dest, T* from, size_t left, size_t right, Compare cmp)
 {
-	VAR *ptl, *tpl, *ptr, *tpr, *ptd, *tpd;
+	T* ptl, *tpl, *ptr, *tpr, *ptd, *tpd;
 	size_t loop;
 #if !defined __clang__
 	size_t x, y;
@@ -429,9 +520,9 @@ void FUNC(cross_merge)(VAR *dest, VAR *from, size_t left, size_t right, CMPFUNC 
 
 	if (left + 1 >= right && right >= left && left >= 32)
 	{
-		if (cmp(ptl + 15, ptr) > 0 && cmp(ptl, ptr + 15) <= 0 && cmp(tpl, tpr - 15) > 0 && cmp(tpl - 15, tpr) <= 0)
+		if (cmp(*(ptl + 15), *ptr) > 0 && cmp(*ptl, *(ptr + 15)) <= 0 && cmp(*tpl, *(tpr - 15)) > 0 && cmp(*(tpl - 15), *tpr) <= 0)
 		{
-			FUNC(parity_merge)(dest, from, left, right, cmp);
+			parity_merge(dest, from, left, right, cmp);
 			return;
 		}
 	}
@@ -442,16 +533,16 @@ void FUNC(cross_merge)(VAR *dest, VAR *from, size_t left, size_t right, CMPFUNC 
 	{
 		if (tpl - ptl > 8)
 		{
-			ptl8_ptr: if (cmp(ptl + 7, ptr) <= 0)
+			ptl8_ptr: if (cmp(*(ptl + 7), *ptr) <= 0)
 			{
-				memcpy(ptd, ptl, 8 * sizeof(VAR)); ptd += 8; ptl += 8;
+				std::memcpy(ptd, ptl, 8 * sizeof(T)); ptd += 8; ptl += 8;
 
 				if (tpl - ptl > 8) {goto ptl8_ptr;} continue;
 			}
 
-			tpl8_tpr: if (cmp(tpl - 7, tpr) > 0)
+			tpl8_tpr: if (cmp(*(tpl - 7), *tpr) > 0)
 			{
-				tpd -= 7; tpl -= 7; memcpy(tpd--, tpl--, 8 * sizeof(VAR));
+				tpd -= 7; tpl -= 7; std::memcpy(tpd--, tpl--, 8 * sizeof(T));
 
 				if (tpl - ptl > 8) {goto tpl8_tpr;} continue;
 			}
@@ -459,16 +550,16 @@ void FUNC(cross_merge)(VAR *dest, VAR *from, size_t left, size_t right, CMPFUNC 
 
 		if (tpr - ptr > 8)
 		{
-			ptl_ptr8: if (cmp(ptl, ptr + 7) > 0)
+			ptl_ptr8: if (cmp(*ptl, *(ptr + 7)) > 0)
 			{
-				memcpy(ptd, ptr, 8 * sizeof(VAR)); ptd += 8; ptr += 8;
+				std::memcpy(ptd, ptr, 8 * sizeof(T)); ptd += 8; ptr += 8;
 
 				if (tpr - ptr > 8) {goto ptl_ptr8;} continue;
 			}
 
-			tpl_tpr8: if (cmp(tpl, tpr - 7) <= 0)
+			tpl_tpr8: if (cmp(*tpl, *(tpr - 7)) <= 0)
 			{
-				tpd -= 7; tpr -= 7; memcpy(tpd--, tpr--, 8 * sizeof(VAR));
+				tpd -= 7; tpr -= 7; std::memcpy(tpd--, tpr--, 8 * sizeof(T));
 
 				if (tpr - ptr > 8) {goto tpl_tpr8;} continue;
 			}
@@ -484,8 +575,8 @@ void FUNC(cross_merge)(VAR *dest, VAR *from, size_t left, size_t right, CMPFUNC 
 		{
 			loop = 8; do
 			{
-				*ptd++ = cmp(ptl, ptr) <= 0 ? *ptl++ : *ptr++;
-				*tpd-- = cmp(tpl, tpr)  > 0 ? *tpl-- : *tpr--;
+				*ptd++ = cmp(*ptl, *ptr) <= 0 ? *ptl++ : *ptr++;
+				*tpd-- = cmp(*tpl, *tpr)  > 0 ? *tpl-- : *tpr--;
 			}
 			while (--loop);
 		}
@@ -503,7 +594,7 @@ void FUNC(cross_merge)(VAR *dest, VAR *from, size_t left, size_t right, CMPFUNC 
 
 	while (ptl <= tpl && ptr <= tpr)
 	{
-		*ptd++ = cmp(ptl, ptr) <= 0 ? *ptl++ : *ptr++;
+		*ptd++ = cmp(*ptl, *ptr) <= 0 ? *ptl++ : *ptr++;
 	}
 	while (ptl <= tpl)
 	{
@@ -515,40 +606,42 @@ void FUNC(cross_merge)(VAR *dest, VAR *from, size_t left, size_t right, CMPFUNC 
 	}
 }
 
-void FUNC(quad_merge_block)(VAR *array, VAR *swap, size_t block, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void quad_merge_block(T* array, T* swap, size_t block, Compare cmp)
 {
-	VAR *pt1, *pt2, *pt3;
+	T* pt1, *pt2, *pt3;
 	size_t block_x_2 = block * 2;
 
 	pt1 = array + block;
 	pt2 = pt1 + block;
 	pt3 = pt2 + block;
 
-	switch ((cmp(pt1 - 1, pt1) <= 0) | (cmp(pt3 - 1, pt3) <= 0) * 2)
+	switch ((cmp(*(pt1 - 1), *pt1) <= 0) | (cmp(*(pt3 - 1), *pt3) <= 0) * 2)
 	{
 		case 0:
-			FUNC(cross_merge)(swap, array, block, block, cmp);
-			FUNC(cross_merge)(swap + block_x_2, pt2, block, block, cmp);
+			cross_merge(swap, array, block, block, cmp);
+			cross_merge(swap + block_x_2, pt2, block, block, cmp);
 			break;
 		case 1:
-			memcpy(swap, array, block_x_2 * sizeof(VAR));
-			FUNC(cross_merge)(swap + block_x_2, pt2, block, block, cmp);
+			std::memcpy(swap, array, block_x_2 * sizeof(T));
+			cross_merge(swap + block_x_2, pt2, block, block, cmp);
 			break;
 		case 2:
-			FUNC(cross_merge)(swap, array, block, block, cmp);
-			memcpy(swap + block_x_2, pt2, block_x_2 * sizeof(VAR));
+			cross_merge(swap, array, block, block, cmp);
+			std::memcpy(swap + block_x_2, pt2, block_x_2 * sizeof(T));
 			break;
 		case 3:
-			if (cmp(pt2 - 1, pt2) <= 0)
+			if (cmp(*(pt2 - 1), *pt2) <= 0)
 				return;
-			memcpy(swap, array, block_x_2 * 2 * sizeof(VAR));
+			std::memcpy(swap, array, block_x_2 * 2 * sizeof(T));
 	}
-	FUNC(cross_merge)(array, swap, block_x_2, block_x_2, cmp);
+	cross_merge(array, swap, block_x_2, block_x_2, cmp);
 }
 
-size_t FUNC(quad_merge)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, size_t block, CMPFUNC *cmp)
+template<typename T, typename Compare>
+size_t quad_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
 {
-	VAR *pta, *pte;
+	T* pta, *pte;
 
 	pte = array + nmemb;
 
@@ -560,25 +653,26 @@ size_t FUNC(quad_merge)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, s
 
 		do
 		{
-			FUNC(quad_merge_block)(pta, swap, block / 4, cmp);
+			quad_merge_block(pta, swap, block / 4, cmp);
 
 			pta += block;
 		}
 		while (pta + block <= pte);
 
-		FUNC(tail_merge)(pta, swap, swap_size, pte - pta, block / 4, cmp);
+		tail_merge(pta, swap, swap_size, pte - pta, block / 4, cmp);
 
 		block *= 4;
 	}
 
-	FUNC(tail_merge)(array, swap, swap_size, nmemb, block / 4, cmp);
+	tail_merge(array, swap, swap_size, nmemb, block / 4, cmp);
 
 	return block / 2;
 }
 
-void FUNC(partial_forward_merge)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, size_t block, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void partial_forward_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
 {
-	VAR *ptl, *ptr, *tpl, *tpr;
+	T* ptl, *ptr, *tpl, *tpr;
 	size_t x;
 
 	if (nmemb == block)
@@ -589,25 +683,25 @@ void FUNC(partial_forward_merge)(VAR *array, VAR *swap, size_t swap_size, size_t
 	ptr = array + block;
 	tpr = array + nmemb - 1;
 
-	if (cmp(ptr - 1, ptr) <= 0)
+	if (cmp(*(ptr - 1), *ptr) <= 0)
 	{
 		return;
 	}
 
-	memcpy(swap, array, block * sizeof(VAR));
+	std::memcpy(swap, array, block * sizeof(T));
 
 	ptl = swap;
 	tpl = swap + block - 1;
 
 	while (ptl < tpl - 1 && ptr < tpr - 1)
 	{
-		ptr2: if (cmp(ptl, ptr + 1) > 0)
+		ptr2: if (cmp(*ptl, *(ptr + 1)) > 0)
 		{
 			*array++ = *ptr++; *array++ = *ptr++;
 
 			if (ptr < tpr - 1) {goto ptr2;} break;
 		}
-		if (cmp(ptl + 1, ptr) <= 0)
+		if (cmp(*(ptl + 1), *ptr) <= 0)
 		{
 			*array++ = *ptl++; *array++ = *ptl++;
 
@@ -616,14 +710,14 @@ void FUNC(partial_forward_merge)(VAR *array, VAR *swap, size_t swap_size, size_t
 
 		goto cross_swap;
 
-		ptl2: if (cmp(ptl + 1, ptr) <= 0)
+		ptl2: if (cmp(*(ptl + 1), *ptr) <= 0)
 		{
 			*array++ = *ptl++; *array++ = *ptl++;
 
 			if (ptl < tpl - 1) {goto ptl2;} break;
 		}
 
-		if (cmp(ptl, ptr + 1) > 0)
+		if (cmp(*ptl, *(ptr + 1)) > 0)
 		{
 			*array++ = *ptr++; *array++ = *ptr++;
 
@@ -632,13 +726,13 @@ void FUNC(partial_forward_merge)(VAR *array, VAR *swap, size_t swap_size, size_t
 
 		cross_swap:
 
-		x = cmp(ptl, ptr) <= 0; array[x] = *ptr; ptr += 1; array[!x] = *ptl; ptl += 1; array += 2;
+		x = cmp(*ptl, *ptr) <= 0; array[x] = *ptr; ptr += 1; array[!x] = *ptl; ptl += 1; array += 2;
 		head_branchless_merge(array, x, ptl, ptr, cmp);
 	}
 
 	while (ptl <= tpl && ptr <= tpr)
 	{
-		*array++ = cmp(ptl, ptr) <= 0 ? *ptl++ : *ptr++;
+		*array++ = cmp(*ptl, *ptr) <= 0 ? *ptl++ : *ptr++;
 	}
 
 	while (ptl <= tpl)
@@ -647,9 +741,10 @@ void FUNC(partial_forward_merge)(VAR *array, VAR *swap, size_t swap_size, size_t
 	}
 }
 
-void FUNC(partial_backward_merge)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, size_t block, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void partial_backward_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
 {
-	VAR *tpl, *tpa, *tpr;
+	T* tpl, *tpa, *tpr;
 	size_t right, loop, x;
 
 	if (nmemb == block)
@@ -660,7 +755,7 @@ void FUNC(partial_backward_merge)(VAR *array, VAR *swap, size_t swap_size, size_
 	tpl = array + block - 1;
 	tpa = array + nmemb - 1;
 
-	if (cmp(tpl, tpl + 1) <= 0)
+	if (cmp(*tpl, *(tpl + 1)) <= 0)
 	{
 		return;
 	}
@@ -669,27 +764,27 @@ void FUNC(partial_backward_merge)(VAR *array, VAR *swap, size_t swap_size, size_
 
 	if (nmemb <= swap_size && right >= 64)
 	{
-		FUNC(cross_merge)(swap, array, block, right, cmp);
+		cross_merge(swap, array, block, right, cmp);
 
-		memcpy(array, swap, nmemb * sizeof(VAR));
+		std::memcpy(array, swap, nmemb * sizeof(T));
 
 		return;
 	}
 
-	memcpy(swap, array + block, right * sizeof(VAR));
+	std::memcpy(swap, array + block, right * sizeof(T));
 
 	tpr = swap + right - 1;
 
 	while (tpl > array + 16 && tpr > swap + 16)
 	{
-		tpl_tpr16: if (cmp(tpl, tpr - 15) <= 0)
+		tpl_tpr16: if (cmp(*tpl, *(tpr - 15)) <= 0)
 		{
 			loop = 16; do *tpa-- = *tpr--; while (--loop);
 
 			if (tpr > swap + 16) {goto tpl_tpr16;} break;
 		}
 
-		tpl16_tpr: if (cmp(tpl - 15, tpr) > 0)
+		tpl16_tpr: if (cmp(*(tpl - 15), *tpr) > 0)
 		{
 			loop = 16; do *tpa-- = *tpl--; while (--loop);
 			
@@ -697,17 +792,17 @@ void FUNC(partial_backward_merge)(VAR *array, VAR *swap, size_t swap_size, size_
 		}
 		loop = 8; do
 		{
-			if (cmp(tpl, tpr - 1) <= 0)
+			if (cmp(*tpl, *(tpr - 1)) <= 0)
 			{
 				*tpa-- = *tpr--; *tpa-- = *tpr--;
 			}
-			else if (cmp(tpl - 1, tpr) > 0)
+			else if (cmp(*(tpl - 1), *tpr) > 0)
 			{
 				*tpa-- = *tpl--; *tpa-- = *tpl--;
 			}
 			else
 			{
-				x = cmp(tpl, tpr) <= 0; tpa--; tpa[x] = *tpr; tpr -= 1; tpa[!x] = *tpl; tpl -= 1; tpa--;
+				x = cmp(*tpl, *tpr) <= 0; tpa--; tpa[x] = *tpr; tpr -= 1; tpa[!x] = *tpl; tpl -= 1; tpa--;
 				tail_branchless_merge(tpa, x, tpl, tpr, cmp);
 			}
 		}
@@ -716,29 +811,29 @@ void FUNC(partial_backward_merge)(VAR *array, VAR *swap, size_t swap_size, size_
 
 	while (tpr > swap + 1 && tpl > array + 1)
 	{
-		tpr2: if (cmp(tpl, tpr - 1) <= 0)
+		tpr2: if (cmp(*tpl, *(tpr - 1)) <= 0)
 		{
 			*tpa-- = *tpr--; *tpa-- = *tpr--;
 			
 			if (tpr > swap + 1) {goto tpr2;} break;
 		}
 
-		if (cmp(tpl - 1, tpr) > 0)
+		if (cmp(*(tpl - 1), *tpr) > 0)
 		{
 			*tpa-- = *tpl--; *tpa-- = *tpl--;
 
-			if (tpl > array + 1) {goto tpl2;} break;
+			if (tpl > array + 1) { goto tpl2; } break;
 		}
 		goto cross_swap;
 
-		tpl2: if (cmp(tpl - 1, tpr) > 0)
+	tpl2: if (cmp(*(tpl - 1), *tpr) > 0)
 		{
 			*tpa-- = *tpl--; *tpa-- = *tpl--;
 
 			if (tpl > array + 1) {goto tpl2;} break;
 		}
 
-		if (cmp(tpl, tpr - 1) <= 0)
+		if (cmp(*tpl, *(tpr - 1)) <= 0)
 		{
 			*tpa-- = *tpr--; *tpa-- = *tpr--;
 			
@@ -746,13 +841,13 @@ void FUNC(partial_backward_merge)(VAR *array, VAR *swap, size_t swap_size, size_
 		}
 		cross_swap:
 
-		x = cmp(tpl, tpr) <= 0; tpa--; tpa[x] = *tpr; tpr -= 1; tpa[!x] = *tpl; tpl -= 1; tpa--;
+		x = cmp(*tpl, *tpr) <= 0; tpa--; tpa[x] = *tpr; tpr -= 1; tpa[!x] = *tpl; tpl -= 1; tpa--;
 		tail_branchless_merge(tpa, x, tpl, tpr, cmp);
 	}
 
 	while (tpr >= swap && tpl >= array)
 	{
-		*tpa-- = cmp(tpl, tpr) > 0 ? *tpl-- : *tpr--;
+		*tpa-- = cmp(*tpl, *tpr) > 0 ? *tpl-- : *tpr--;
 	}
 
 	while (tpr >= swap)
@@ -761,9 +856,10 @@ void FUNC(partial_backward_merge)(VAR *array, VAR *swap, size_t swap_size, size_
 	}
 }
 
-void FUNC(tail_merge)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, size_t block, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void tail_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
 {
-	VAR *pta, *pte;
+	T* pta, *pte;
 
 	pte = array + nmemb;
 
@@ -773,11 +869,11 @@ void FUNC(tail_merge)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, siz
 		{
 			if (pta + block * 2 < pte)
 			{
-				FUNC(partial_backward_merge)(pta, swap, swap_size, block * 2, block, cmp);
+				partial_backward_merge(pta, swap, swap_size, block * 2, block, cmp);
 
 				continue;
 			}
-			FUNC(partial_backward_merge)(pta, swap, swap_size, pte - pta, block, cmp);
+			partial_backward_merge(pta, swap, swap_size, pte - pta, block, cmp);
 
 			break;
 		}
@@ -787,9 +883,10 @@ void FUNC(tail_merge)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, siz
 
 // the next four functions provide in-place rotate merge support
 
-void FUNC(trinity_rotation)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, size_t left)
+template<typename T>
+void trinity_rotation(T* array, T* swap, size_t swap_size, size_t nmemb, size_t left)
 {
-	VAR temp;
+	T temp;
 	size_t bridge, right = nmemb - left;
 
 	if (swap_size > 65536)
@@ -801,13 +898,13 @@ void FUNC(trinity_rotation)(VAR *array, VAR *swap, size_t swap_size, size_t nmem
 	{
 		if (left <= swap_size)
 		{
-			memcpy(swap, array, left * sizeof(VAR));
-			memmove(array, array + left, right * sizeof(VAR));
-			memcpy(array + right, swap, left * sizeof(VAR));
+			std::memcpy(swap, array, left * sizeof(T));
+			std::memmove(array, array + left, right * sizeof(T));
+			std::memcpy(array + right, swap, left * sizeof(T));
 		}
 		else
 		{
-			VAR *pta, *ptb, *ptc, *ptd;
+			T* pta, *ptb, *ptc, *ptd;
 
 			pta = array;
 			ptb = pta + left;
@@ -819,13 +916,13 @@ void FUNC(trinity_rotation)(VAR *array, VAR *swap, size_t swap_size, size_t nmem
 				ptc = pta + right;
 				ptd = ptc + left;
 
-				memcpy(swap, ptb, bridge * sizeof(VAR));
+				std::memcpy(swap, ptb, bridge * sizeof(T));
 
 				while (left--)
 				{
 					*--ptc = *--ptd; *ptd = *--ptb;
 				}
-				memcpy(pta, swap, bridge * sizeof(VAR));
+				std::memcpy(pta, swap, bridge * sizeof(T));
 			}
 			else
 			{
@@ -859,13 +956,13 @@ void FUNC(trinity_rotation)(VAR *array, VAR *swap, size_t swap_size, size_t nmem
 	{
 		if (right <= swap_size)
 		{
-			memcpy(swap, array + left, right * sizeof(VAR));
-			memmove(array + right, array, left * sizeof(VAR));
-			memcpy(array, swap, right * sizeof(VAR));
+			std::memcpy(swap, array + left, right * sizeof(T));
+			std::memmove(array + right, array, left * sizeof(T));
+			std::memcpy(array, swap, right * sizeof(T));
 		}
 		else
 		{
-			VAR *pta, *ptb, *ptc, *ptd;
+			T* pta, *ptb, *ptc, *ptd;
 
 			pta = array;
 			ptb = pta + left;
@@ -877,13 +974,13 @@ void FUNC(trinity_rotation)(VAR *array, VAR *swap, size_t swap_size, size_t nmem
 				ptc = pta + right;
 				ptd = ptc + left;
 
-				memcpy(swap, ptc, bridge * sizeof(VAR));
+				std::memcpy(swap, ptc, bridge * sizeof(T));
 
 				while (right--)
 				{
 					*ptc++ = *pta; *pta++ = *ptb++;
 				}
-				memcpy(ptd - bridge, swap, bridge * sizeof(VAR));
+				std::memcpy(ptd - bridge, swap, bridge * sizeof(T));
 			}
 			else
 			{
@@ -915,7 +1012,7 @@ void FUNC(trinity_rotation)(VAR *array, VAR *swap, size_t swap_size, size_t nmem
 	}
 	else
 	{
-		VAR *pta, *ptb;
+		T* pta, *ptb;
 
 		pta = array;
 		ptb = pta + left;
@@ -927,9 +1024,10 @@ void FUNC(trinity_rotation)(VAR *array, VAR *swap, size_t swap_size, size_t nmem
 	}
 }
 
-size_t FUNC(monobound_binary_first)(VAR *array, VAR *value, size_t top, CMPFUNC *cmp)
+template<typename T, typename Compare>
+size_t monobound_binary_first(T* array, T* value, size_t top, Compare cmp)
 {
-	VAR *end;
+	T* end;
 	size_t mid;
 
 	end = array + top;
@@ -938,25 +1036,26 @@ size_t FUNC(monobound_binary_first)(VAR *array, VAR *value, size_t top, CMPFUNC 
 	{
 		mid = top / 2;
 
-		if (cmp(value, end - mid) <= 0)
+		if (cmp(*value, *(end - mid)) <= 0)
 		{
 			end -= mid;
 		}
 		top -= mid;
 	}
 
-	if (cmp(value, end - 1) <= 0)
+	if (cmp(*value, *(end - 1)) <= 0)
 	{
 		end--;
 	}
 	return (end - array);
 }
 
-void FUNC(rotate_merge_block)(VAR *array, VAR *swap, size_t swap_size, size_t lblock, size_t right, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void rotate_merge_block(T* array, T* swap, size_t swap_size, size_t lblock, size_t right, Compare cmp)
 {
 	size_t left, rblock, unbalanced;
 
-	if (cmp(array + lblock - 1, array + lblock) <= 0)
+	if (cmp(*(array + lblock - 1), *(array + lblock)) <= 0)
 	{
 		return;
 	}
@@ -964,7 +1063,7 @@ void FUNC(rotate_merge_block)(VAR *array, VAR *swap, size_t swap_size, size_t lb
 	rblock = lblock / 2;
 	lblock -= rblock;
 
-	left = FUNC(monobound_binary_first)(array + lblock + rblock, array + lblock, right, cmp);
+	left = monobound_binary_first(array + lblock + rblock, array + lblock, right, cmp);
 
 	right -= left;
 
@@ -974,29 +1073,29 @@ void FUNC(rotate_merge_block)(VAR *array, VAR *swap, size_t swap_size, size_t lb
 	{
 		if (lblock + left <= swap_size)
 		{
-			memcpy(swap, array, lblock * sizeof(VAR));
-			memcpy(swap + lblock, array + lblock + rblock, left * sizeof(VAR));
-			memmove(array + lblock + left, array + lblock, rblock * sizeof(VAR));
+			std::memcpy(swap, array, lblock * sizeof(T));
+			std::memcpy(swap + lblock, array + lblock + rblock, left * sizeof(T));
+			std::memmove(array + lblock + left, array + lblock, rblock * sizeof(T));
 
-			FUNC(cross_merge)(array, swap, lblock, left, cmp);
+			cross_merge(array, swap, lblock, left, cmp);
 		}
 		else
 		{
-			FUNC(trinity_rotation)(array + lblock, swap, swap_size, rblock + left, rblock);
+			trinity_rotation(array + lblock, swap, swap_size, rblock + left, rblock);
 
 			unbalanced = (left * 2 < lblock) | (lblock * 2 < left);
 
 			if (unbalanced && left <= swap_size)
 			{
-				FUNC(partial_backward_merge)(array, swap, swap_size, lblock + left, lblock, cmp);
+				partial_backward_merge(array, swap, swap_size, lblock + left, lblock, cmp);
 			}
 			else if (unbalanced && lblock <= swap_size)
 			{
-				FUNC(partial_forward_merge)(array, swap, swap_size, lblock + left, lblock, cmp);
+				partial_forward_merge(array, swap, swap_size, lblock + left, lblock, cmp);
 			}
 			else
 			{
-				FUNC(rotate_merge_block)(array, swap, swap_size, lblock, left, cmp);
+				rotate_merge_block(array, swap, swap_size, lblock, left, cmp);
 			}
 		}
 	}
@@ -1007,28 +1106,29 @@ void FUNC(rotate_merge_block)(VAR *array, VAR *swap, size_t swap_size, size_t lb
 
 		if ((unbalanced && right <= swap_size) || right + rblock <= swap_size)
 		{
-			FUNC(partial_backward_merge)(array + lblock + left, swap, swap_size, rblock + right, rblock, cmp);
+			partial_backward_merge(array + lblock + left, swap, swap_size, rblock + right, rblock, cmp);
 		}
 		else if (unbalanced && rblock <= swap_size)
 		{
-			FUNC(partial_forward_merge)(array + lblock + left, swap, swap_size, rblock + right, rblock, cmp);
+			partial_forward_merge(array + lblock + left, swap, swap_size, rblock + right, rblock, cmp);
 		}
 		else
 		{
-			FUNC(rotate_merge_block)(array + lblock + left, swap, swap_size, rblock, right, cmp);
+			rotate_merge_block(array + lblock + left, swap, swap_size, rblock, right, cmp);
 		}
 	}
 }
 
-void FUNC(rotate_merge)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, size_t block, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void rotate_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
 {
-	VAR *pta, *pte;
+	T* pta, *pte;
 
 	pte = array + nmemb;
 
 	if (nmemb <= block * 2 && nmemb - block <= swap_size)
 	{
-		FUNC(partial_backward_merge)(array, swap, swap_size, nmemb, block, cmp);
+		partial_backward_merge(array, swap, swap_size, nmemb, block, cmp);
 
 		return;
 	}
@@ -1039,11 +1139,11 @@ void FUNC(rotate_merge)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, s
 		{
 			if (pta + block * 2 < pte)
 			{
-				FUNC(rotate_merge_block)(pta, swap, swap_size, block, block, cmp);
+				rotate_merge_block(pta, swap, swap_size, block, block, cmp);
 
 				continue;
 			}
-			FUNC(rotate_merge_block)(pta, swap, swap_size, block, pte - pta - block, cmp);
+			rotate_merge_block(pta, swap, swap_size, block, pte - pta - block, cmp);
 
 			break;
 		}
@@ -1051,67 +1151,70 @@ void FUNC(rotate_merge)(VAR *array, VAR *swap, size_t swap_size, size_t nmemb, s
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////
-//┌─────────────────────────────────────────────────────────────────────────┐//
-//│    ██████┐ ██┐   ██┐ █████┐ ██████┐ ███████┐ ██████┐ ██████┐ ████████┐  │//
-//│   ██┌───██┐██│   ██│██┌──██┐██┌──██┐██┌────┘██┌───██┐██┌──██┐└──██┌──┘  │//
-//│   ██│   ██│██│   ██│███████│██│  ██│███████┐██│   ██│██████┌┘   ██│     │//
-//│   ██│▄▄ ██│██│   ██│██┌──██│██│  ██│└────██│██│   ██│██┌──██┐   ██│     │//
-//│   └██████┌┘└██████┌┘██│  ██│██████┌┘███████│└██████┌┘██│  ██│   ██│     │//
-//│    └──▀▀─┘  └─────┘ └─┘  └─┘└─────┘ └──────┘ └─────┘ └─┘  └─┘   └─┘     │//
-//└─────────────────────────────────────────────────────────────────────────┘//
-///////////////////////////////////////////////////////////////////////////////
-
-void FUNC(quadsort)(void *array, size_t nmemb, CMPFUNC *cmp)
+template<typename T, typename Compare>
+void quadsort_swap(T* array, T* swap, size_t swap_size, size_t nmemb, Compare cmp)
 {
-	VAR *pta = (VAR *) array;
+	T* pta = array;
+	T* pts = swap;
+
+	if (nmemb <= 96)
+	{
+		tail_swap(pta, pts, nmemb, cmp);
+	}
+	else if (quad_swap(pta, nmemb, cmp) == 0)
+	{
+		size_t block = quad_merge(pta, pts, swap_size, nmemb, 32, cmp);
+
+		rotate_merge(pta, pts, swap_size, nmemb, block, cmp);
+	}
+}
+
+} // namespace scandum::detail
+
+template<typename T, typename Compare>
+void quadsort(T* array, size_t nmemb, Compare cmp)
+{
+	T* pta = (T*)array;
 
 	if (nmemb < 32)
 	{
-		VAR swap[nmemb];
+		T swap[nmemb];
 
-		FUNC(tail_swap)(pta, swap, nmemb, cmp);
+		detail::tail_swap(pta, swap, nmemb, cmp);
 	}
-	else if (FUNC(quad_swap)(pta, nmemb, cmp) == 0)
+	else if (detail::quad_swap(pta, nmemb, cmp) == 0)
 	{
-		VAR *swap = NULL;
+		T* swap = NULL;
 		size_t block, swap_size = nmemb;
 
 		if (nmemb > 4194304) for (swap_size = 4194304 ; swap_size * 8 <= nmemb ; swap_size *= 4) {}
 
-		swap = (VAR *) malloc(swap_size * sizeof(VAR));
+		swap = (T*)std::malloc(swap_size * sizeof(T));
 
 		if (swap == NULL)
 		{
-			VAR stack[512];
+			T stack[512];
 
-			block = FUNC(quad_merge)(pta, stack, 512, nmemb, 32, cmp);
+			block = detail::quad_merge(pta, stack, 512, nmemb, 32, cmp);
 
-			FUNC(rotate_merge)(pta, stack, 512, nmemb, block, cmp);
+			detail::rotate_merge(pta, stack, 512, nmemb, block, cmp);
 
 			return;
 		}
-		block = FUNC(quad_merge)(pta, swap, swap_size, nmemb, 32, cmp);
+		block = detail::quad_merge(pta, swap, swap_size, nmemb, 32, cmp);
 
-		FUNC(rotate_merge)(pta, swap, swap_size, nmemb, block, cmp);
+		detail::rotate_merge(pta, swap, swap_size, nmemb, block, cmp);
 
-		free(swap);
+		std::free(swap);
 	}
 }
 
-void FUNC(quadsort_swap)(void *array, void *swap, size_t swap_size, size_t nmemb, CMPFUNC *cmp)
-{
-	VAR *pta = (VAR *) array;
-	VAR *pts = (VAR *) swap;
+} // namespace scandum
 
-	if (nmemb <= 96)
-	{
-		FUNC(tail_swap)(pta, pts, nmemb, cmp);
-	}
-	else if (FUNC(quad_swap)(pta, nmemb, cmp) == 0)
-	{
-		size_t block = FUNC(quad_merge)(pta, pts, swap_size, nmemb, 32, cmp);
 
-		FUNC(rotate_merge)(pta, pts, swap_size, nmemb, block, cmp);
-	}
-}
+#undef head_branchless_merge
+#undef tail_branchless_merge
+#undef parity_merge_two
+#undef parity_merge_four
+#undef branchless_swap
+#undef swap_branchless

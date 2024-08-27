@@ -9,7 +9,7 @@ This port is still a work in progress. As of now, it provides a type safe interf
 
 - It uses pointers, not random access iterators. This means that crumsort-cpp only works on arrays of contiguous memory, like `std::vector`, but not on discontiguous containers, like `std::deque`.
 - It assumes that that the sorted type is [trivial](https://en.cppreference.com/w/cpp/named_req/TrivialType).
-- It uses variable length arrays, which are not guaranteed to be supported in standards conforming C++ compilers (for example, MSVC).
+- It uses variable length arrays, which some C++ compilers do not support (MSVC) since VLAs are not part of the C++ standard.
 
 I will work on fixing these limitations as time allows.
 

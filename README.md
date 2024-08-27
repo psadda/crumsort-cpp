@@ -3,9 +3,7 @@ Crumsort in C++
 
 This is a C to C++ port of Igor van den Hoven's crumsort.
 
-Porting crumsort to C++ is not as trivial as one might expect. The original crumsort has many C-isms that don't map well to modern C++.
-
-This port is a work in progress. There are still some issues that have to be fixed before it can be used as a drop in replacement for `std::sort`:
+Porting crumsort to C++ is not as trivial as one might expect. The original crumsort has many C-isms that don't map well to modern C++ and prevent it from being used as a drop in replacement for `std::sort`:
 
 - It uses pointers, not random access iterators. This means that crumsort-cpp only works on arrays of contiguous memory, like `std::vector`, but not on discontiguous containers, like `std::deque`.
 - It assumes that that the sorted type is [trivial](https://en.cppreference.com/w/cpp/named_req/TrivialType).

@@ -9,7 +9,7 @@
 // utilize branchless ternary operations in clang
 
 #if !defined __clang__
-#define head_branchless_merge(ptd, x, ptl, ptr, cmp)  \
+#define scandum_head_branchless_merge(ptd, x, ptl, ptr, cmp)  \
 	x = cmp(*ptl, *ptr) <= 0;  \
 	*ptd = *ptl;  \
 	ptl += x;  \
@@ -17,12 +17,12 @@
 	ptr += !x;  \
 	ptd++;
 #else
-#define head_branchless_merge(ptd, x, ptl, ptr, cmp)  \
+#define scandum_head_branchless_merge(ptd, x, ptl, ptr, cmp)  \
 	*ptd++ = cmp(*ptl, *ptr) <= 0 ? *ptl++ : *ptr++;
 #endif
 
 #if !defined __clang__
-#define tail_branchless_merge(tpd, y, tpl, tpr, cmp)  \
+#define scandum_tail_branchless_merge(tpd, y, tpl, tpr, cmp)  \
 	y = cmp(*tpl, *tpr) <= 0;  \
 	*tpd = *tpl;  \
 	tpl -= !y;  \
@@ -30,50 +30,50 @@
 	tpd[y] = *tpr;  \
 	tpr -= y;
 #else
-#define tail_branchless_merge(tpd, x, tpl, tpr, cmp)  \
+#define scandum_tail_branchless_merge(tpd, x, tpl, tpr, cmp)  \
 	*tpd-- = cmp(*tpl, *tpr) > 0 ? *tpl-- : *tpr--;
 #endif
 
 // guarantee small parity merges are inlined with minimal overhead
 
-#define parity_merge_two(array, swap, x, ptl, ptr, pts, cmp)  \
+#define scandum_parity_merge_two(array, swap, x, ptl, ptr, pts, cmp)  \
 	ptl = array; ptr = array + 2; pts = swap;  \
-	head_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	scandum_head_branchless_merge(pts, x, ptl, ptr, cmp);  \
 	*pts = cmp(*ptl, *ptr) <= 0 ? *ptl : *ptr;  \
   \
 	ptl = array + 1; ptr = array + 3; pts = swap + 3;  \
-	tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
 	*pts = cmp(*ptl, *ptr)  > 0 ? *ptl : *ptr;
 
-#define parity_merge_four(array, swap, x, ptl, ptr, pts, cmp)  \
+#define scandum_parity_merge_four(array, swap, x, ptl, ptr, pts, cmp)  \
 	ptl = array + 0; ptr = array + 4; pts = swap;  \
-	head_branchless_merge(pts, x, ptl, ptr, cmp);  \
-	head_branchless_merge(pts, x, ptl, ptr, cmp);  \
-	head_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	scandum_head_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	scandum_head_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	scandum_head_branchless_merge(pts, x, ptl, ptr, cmp);  \
 	*pts = cmp(*ptl, *ptr) <= 0 ? *ptl : *ptr;  \
   \
 	ptl = array + 3; ptr = array + 7; pts = swap + 7;  \
-	tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
-	tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
-	tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
+	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
 	*pts = cmp(*ptl, *ptr)  > 0 ? *ptl : *ptr;
 
 
 #if !defined __clang__
-#define branchless_swap(pta, swap, x, cmp)  \
+#define scandum_branchless_swap(pta, swap, x, cmp)  \
 	x = cmp(*pta, *(pta + 1)) > 0;  \
 	swap = pta[!x];  \
 	pta[0] = pta[x];  \
 	pta[1] = swap;
 #else
-#define branchless_swap(pta, swap, x, cmp)  \
+#define scandum_branchless_swap(pta, swap, x, cmp)  \
 	x = 0;  \
 	swap = cmp(*pta, *(pta + 1)) > 0 ? pta[x++] : pta[1];  \
 	pta[0] = pta[x];  \
 	pta[1] = swap;
 #endif
 
-#define swap_branchless(pta, swap, x, y, cmp)  \
+#define scandum_swap_branchless(pta, swap, x, y, cmp)  \
 	x = cmp(*pta, *(pta + 1)) > 0;  \
 	y = !x;  \
 	swap = pta[y];  \
@@ -96,16 +96,16 @@ void parity_swap_four(Iterator array, Compare cmp)
 	Iterator pta = array;
 	size_t x;
 
-	branchless_swap(pta, tmp, x, cmp); pta += 2;
-	branchless_swap(pta, tmp, x, cmp); pta--;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta += 2;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta--;
 
 	if (cmp(*pta, *(pta + 1)) > 0)
 	{
 		tmp = pta[0]; pta[0] = pta[1]; pta[1] = tmp; pta--;
 
-		branchless_swap(pta, tmp, x, cmp); pta += 2;
-		branchless_swap(pta, tmp, x, cmp); pta--;
-		branchless_swap(pta, tmp, x, cmp);
+		scandum_branchless_swap(pta, tmp, x, cmp); pta += 2;
+		scandum_branchless_swap(pta, tmp, x, cmp); pta--;
+		scandum_branchless_swap(pta, tmp, x, cmp);
 	}
 }
 
@@ -118,19 +118,19 @@ void parity_swap_five(Iterator array, Compare cmp)
 	Iterator pta = array;
 	size_t x, y;
 
-	branchless_swap(pta, tmp, x, cmp); pta += 2;
-	branchless_swap(pta, tmp, x, cmp); pta -= 1;
-	branchless_swap(pta, tmp, x, cmp); pta += 2;
-	branchless_swap(pta, tmp, y, cmp); pta = array;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta += 2;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta -= 1;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta += 2;
+	scandum_branchless_swap(pta, tmp, y, cmp); pta = array;
 
 	if (x + y)
 	{
-		branchless_swap(pta, tmp, x, cmp); pta += 2;
-		branchless_swap(pta, tmp, x, cmp); pta -= 1;
-		branchless_swap(pta, tmp, x, cmp); pta += 2;
-		branchless_swap(pta, tmp, x, cmp); pta = array;
-		branchless_swap(pta, tmp, x, cmp); pta += 2;
-		branchless_swap(pta, tmp, x, cmp); pta -= 1;
+		scandum_branchless_swap(pta, tmp, x, cmp); pta += 2;
+		scandum_branchless_swap(pta, tmp, x, cmp); pta -= 1;
+		scandum_branchless_swap(pta, tmp, x, cmp); pta += 2;
+		scandum_branchless_swap(pta, tmp, x, cmp); pta = array;
+		scandum_branchless_swap(pta, tmp, x, cmp); pta += 2;
+		scandum_branchless_swap(pta, tmp, x, cmp); pta -= 1;
 	}
 }
 
@@ -143,15 +143,15 @@ void parity_swap_six(Iterator array, T* swap, Compare cmp)
 	Iterator ptr;
 	size_t x, y;
 
-	branchless_swap(pta, tmp, x, cmp); pta++;
-	branchless_swap(pta, tmp, x, cmp); pta += 3;
-	branchless_swap(pta, tmp, x, cmp); pta--;
-	branchless_swap(pta, tmp, x, cmp); pta = array;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta++;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta += 3;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta--;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta = array;
 
 	if (cmp(*(pta + 2), *(pta + 3)) <= 0)
 	{
-		branchless_swap(pta, tmp, x, cmp); pta += 4;
-		branchless_swap(pta, tmp, x, cmp);
+		scandum_branchless_swap(pta, tmp, x, cmp); pta += 4;
+		scandum_branchless_swap(pta, tmp, x, cmp);
 		return;
 	}
 	x = cmp(*pta, *(pta + 1)) > 0; y = !x; swap[0] = pta[x]; swap[1] = pta[y]; swap[2] = pta[2]; pta += 4;
@@ -159,14 +159,14 @@ void parity_swap_six(Iterator array, T* swap, Compare cmp)
 
 	pta = array; ptl = swap; ptr = swap + 3;
 
-	head_branchless_merge(pta, x, ptl, ptr, cmp);
-	head_branchless_merge(pta, x, ptl, ptr, cmp);
-	head_branchless_merge(pta, x, ptl, ptr, cmp);
+	scandum_head_branchless_merge(pta, x, ptl, ptr, cmp);
+	scandum_head_branchless_merge(pta, x, ptl, ptr, cmp);
+	scandum_head_branchless_merge(pta, x, ptl, ptr, cmp);
 
 	pta = array + 5; ptl = swap + 2; ptr = swap + 5;
 
-	tail_branchless_merge(pta, y, ptl, ptr, cmp);
-	tail_branchless_merge(pta, y, ptl, ptr, cmp);
+	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
+	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
 	*pta = cmp(*ptl, *ptr)  > 0 ? *ptl : *ptr;
 }
 
@@ -179,16 +179,16 @@ void parity_swap_seven(Iterator array, T* swap, Compare cmp)
 	Iterator ptr;
 	size_t x, y;
 
-	branchless_swap(pta, tmp, x, cmp); pta += 2;
-	branchless_swap(pta, tmp, x, cmp); pta += 2;
-	branchless_swap(pta, tmp, x, cmp); pta -= 3;
-	branchless_swap(pta, tmp, y, cmp); pta += 2;
-	branchless_swap(pta, tmp, x, cmp); pta += 2; y += x;
-	branchless_swap(pta, tmp, x, cmp); pta -= 1; y += x;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta += 2;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta += 2;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta -= 3;
+	scandum_branchless_swap(pta, tmp, y, cmp); pta += 2;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta += 2; y += x;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta -= 1; y += x;
 
 	if (y == 0) return;
 
-	branchless_swap(pta, tmp, x, cmp); pta = array;
+	scandum_branchless_swap(pta, tmp, x, cmp); pta = array;
 
 	x = cmp(*pta, *(pta + 1)) > 0; swap[0] = pta[x]; swap[1] = pta[!x]; swap[2] = pta[2]; pta += 3;
 	x = cmp(*pta, *(pta + 1)) > 0; swap[3] = pta[x]; swap[4] = pta[!x]; pta += 2;
@@ -196,15 +196,15 @@ void parity_swap_seven(Iterator array, T* swap, Compare cmp)
 
 	pta = array; ptl = swap; ptr = swap + 3;
 
-	head_branchless_merge(pta, x, ptl, ptr, cmp);
-	head_branchless_merge(pta, x, ptl, ptr, cmp);
-	head_branchless_merge(pta, x, ptl, ptr, cmp);
+	scandum_head_branchless_merge(pta, x, ptl, ptr, cmp);
+	scandum_head_branchless_merge(pta, x, ptl, ptr, cmp);
+	scandum_head_branchless_merge(pta, x, ptl, ptr, cmp);
 
 	pta = array + 6; ptl = swap + 2; ptr = swap + 6;
 
-	tail_branchless_merge(pta, y, ptl, ptr, cmp);
-	tail_branchless_merge(pta, y, ptl, ptr, cmp);
-	tail_branchless_merge(pta, y, ptl, ptr, cmp);
+	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
+	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
+	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
 	*pta = cmp(*ptl, *ptr) > 0 ? *ptl : *ptr;
 }
 
@@ -220,12 +220,12 @@ void tiny_sort(Iterator array, T* swap, size_t nmemb, Compare cmp)
 		case 1:
 			return;
 		case 2:
-			branchless_swap(array, tmp, x, cmp);
+			scandum_branchless_swap(array, tmp, x, cmp);
 			return;
 		case 3:
-			branchless_swap(array, tmp, x, cmp); array++;
-			branchless_swap(array, tmp, x, cmp); array--;
-			branchless_swap(array, tmp, x, cmp);
+			scandum_branchless_swap(array, tmp, x, cmp); array++;
+			scandum_branchless_swap(array, tmp, x, cmp); array--;
+			scandum_branchless_swap(array, tmp, x, cmp);
 			return;
 		case 4:
 			parity_swap_four(array, cmp);
@@ -284,8 +284,8 @@ void parity_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compar
 	{
 		while (--left)
 		{
-			head_branchless_merge(ptd, x, ptl, ptr, cmp);
-			tail_branchless_merge(tpd, y, tpl, tpr, cmp);
+			scandum_head_branchless_merge(ptd, x, ptl, ptr, cmp);
+			scandum_tail_branchless_merge(tpd, y, tpl, tpr, cmp);
 		}
 	}
 	*tpd = cmp(*tpl, *tpr)  > 0 ? *tpl : *tpr;
@@ -361,10 +361,10 @@ void quad_swap_merge(Iterator array, T* swap, Compare cmp)
 #if !defined __clang__
 	size_t x;
 #endif
-	parity_merge_two(array + 0, swap + 0, x, ptl, ptr, pts, cmp);
-	parity_merge_two(array + 4, swap + 4, x, ptl, ptr, pts, cmp);
+	scandum_parity_merge_two(array + 0, swap + 0, x, ptl, ptr, pts, cmp);
+	scandum_parity_merge_two(array + 4, swap + 4, x, ptl, ptr, pts, cmp);
 
-	parity_merge_four(swap, array, x, ptl, ptr, pts, cmp);
+	scandum_parity_merge_four(swap, array, x, ptl, ptr, pts, cmp);
 }
 
 template<typename T, typename Iterator, typename Compare>
@@ -642,8 +642,8 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 		{
 			loop = 8; do
 			{
-				head_branchless_merge(ptd, x, ptl, ptr, cmp);
-				tail_branchless_merge(tpd, y, tpl, tpr, cmp);
+				scandum_head_branchless_merge(ptd, x, ptl, ptr, cmp);
+				scandum_tail_branchless_merge(tpd, y, tpl, tpr, cmp);
 			}
 			while (--loop);
 		}
@@ -785,7 +785,7 @@ void partial_forward_merge(Iterator array, T* swap, size_t swap_size, size_t nme
 		cross_swap:
 
 		x = cmp(*ptl, *ptr) <= 0; array[x] = *ptr; ptr += 1; array[!x] = *ptl; ptl += 1; array += 2;
-		head_branchless_merge(array, x, ptl, ptr, cmp);
+		scandum_head_branchless_merge(array, x, ptl, ptr, cmp);
 	}
 
 	while (ptl <= tpl && ptr <= tpr)
@@ -861,7 +861,7 @@ void partial_backward_merge(Iterator array, T* swap, size_t swap_size, size_t nm
 			else
 			{
 				x = cmp(*tpl, *tpr) <= 0; tpa--; tpa[x] = *tpr; tpr -= 1; tpa[!x] = *tpl; tpl -= 1; tpa--;
-				tail_branchless_merge(tpa, x, tpl, tpr, cmp);
+				scandum_tail_branchless_merge(tpa, x, tpl, tpr, cmp);
 			}
 		}
 		while (--loop);
@@ -900,7 +900,7 @@ void partial_backward_merge(Iterator array, T* swap, size_t swap_size, size_t nm
 		cross_swap:
 
 		x = cmp(*tpl, *tpr) <= 0; tpa--; tpa[x] = *tpr; tpr -= 1; tpa[!x] = *tpl; tpl -= 1; tpa--;
-		tail_branchless_merge(tpa, x, tpl, tpr, cmp);
+		scandum_tail_branchless_merge(tpa, x, tpl, tpr, cmp);
 	}
 
 	while (tpr >= swap && tpl >= array)
@@ -1243,11 +1243,11 @@ void quadsort(T* array, size_t nmemb, Compare cmp)
 } // namespace scandum
 
 
-#undef head_branchless_merge
-#undef tail_branchless_merge
-#undef parity_merge_two
-#undef parity_merge_four
-#undef branchless_swap
-#undef swap_branchless
+#undef scandum_head_branchless_merge
+#undef scandum_tail_branchless_merge
+#undef scandum_parity_merge_two
+#undef scandum_parity_merge_four
+#undef scandum_branchless_swap
+#undef scandum_swap_branchless
 
 #endif

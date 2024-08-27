@@ -3,7 +3,7 @@
 
 // quadsort 1.2.1.3 - Igor van den Hoven ivdhoven@gmail.com
 
-#include <cstring>
+#include <cstring>     // for std::memcpy, std::memmove, std::memset
 #include <type_traits>
 
 // utilize branchless ternary operations in clang
@@ -87,10 +87,13 @@ namespace detail {
 
 // the next seven functions are used for sorting 0 to 31 elements
 
-template<typename T, typename Compare>
-void parity_swap_four(T* array, Compare cmp)
+template<typename Iterator, typename Compare>
+void parity_swap_four(Iterator array, Compare cmp)
 {
-	T tmp, *pta = array;
+	typedef std::remove_reference_t<decltype(*array)> T;
+
+	T tmp;
+	Iterator pta = array;
 	size_t x;
 
 	branchless_swap(pta, tmp, x, cmp); pta += 2;
@@ -106,10 +109,13 @@ void parity_swap_four(T* array, Compare cmp)
 	}
 }
 
-template<typename T, typename Compare>
-void parity_swap_five(T* array, Compare cmp)
+template<typename Iterator, typename Compare>
+void parity_swap_five(Iterator array, Compare cmp)
 {
-	T tmp, *pta = array;
+	typedef std::remove_reference_t<decltype(*array)> T;
+
+	T tmp;
+	Iterator pta = array;
 	size_t x, y;
 
 	branchless_swap(pta, tmp, x, cmp); pta += 2;
@@ -128,10 +134,13 @@ void parity_swap_five(T* array, Compare cmp)
 	}
 }
 
-template<typename T, typename Compare>
-void parity_swap_six(T* array, T* swap, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void parity_swap_six(Iterator array, T* swap, Compare cmp)
 {
-	T tmp, *pta = array, *ptl, *ptr;
+	T tmp;
+	Iterator pta = array;
+	Iterator ptl;
+	Iterator ptr;
 	size_t x, y;
 
 	branchless_swap(pta, tmp, x, cmp); pta++;
@@ -161,10 +170,13 @@ void parity_swap_six(T* array, T* swap, Compare cmp)
 	*pta = cmp(*ptl, *ptr)  > 0 ? *ptl : *ptr;
 }
 
-template<typename T, typename Compare>
-void parity_swap_seven(T* array, T* swap, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void parity_swap_seven(Iterator array, T* swap, Compare cmp)
 {
-	T tmp, *pta = array, *ptl, *ptr;
+	T tmp;
+	Iterator pta = array;
+	Iterator ptl;
+	Iterator ptr;
 	size_t x, y;
 
 	branchless_swap(pta, tmp, x, cmp); pta += 2;
@@ -196,8 +208,8 @@ void parity_swap_seven(T* array, T* swap, Compare cmp)
 	*pta = cmp(*ptl, *ptr) > 0 ? *ptl : *ptr;
 }
 
-template<typename T, typename Compare>
-void tiny_sort(T* array, T* swap, size_t nmemb, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void tiny_sort(Iterator array, T* swap, size_t nmemb, Compare cmp)
 {
 	T tmp;
 	size_t x;
@@ -232,19 +244,25 @@ void tiny_sort(T* array, T* swap, size_t nmemb, Compare cmp)
 
 // left must be equal or one smaller than right
 
-template<typename T, typename Compare>
-void parity_merge(T* dest, T* from, size_t left, size_t right, Compare cmp)
+template<typename OutputIt, typename InputIt, typename Compare>
+void parity_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare cmp)
 {
-	T *ptl, *ptr, *tpl, *tpr, *tpd, *ptd;
+	typedef std::remove_cv_t<std::remove_reference_t<decltype(*dest)>> OutputT;
+	typedef std::remove_cv_t<std::remove_reference_t<decltype(*from)>> InputT;
+	static_assert (
+		std::is_same_v<OutputT, InputT>,
+		"output and input iterators must refer to the same type"
+	);
+
 #if !defined __clang__
 	size_t x, y;
 #endif
-	ptl = from;
-	ptr = from + left;
-	ptd = dest;
-	tpl = ptr - 1;
-	tpr = tpl + right;
-	tpd = dest + left + right - 1;
+	InputIt ptl = from;
+	InputIt ptr = from + left;
+	OutputIt ptd = dest;
+	InputIt tpl = ptr - 1;
+	InputIt tpr = tpl + right;
+	OutputIt tpd = dest + left + right - 1;
 
 	if (left < right)
 	{
@@ -273,8 +291,8 @@ void parity_merge(T* dest, T* from, size_t left, size_t right, Compare cmp)
 	*tpd = cmp(*tpl, *tpr)  > 0 ? *tpl : *tpr;
 }
 
-template<typename T, typename Compare>
-void tail_swap(T* array, T* swap, size_t nmemb, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void tail_swap(Iterator array, T* swap, size_t nmemb, Compare cmp)
 {
 	if (nmemb < 8)
 	{
@@ -290,7 +308,7 @@ void tail_swap(T* array, T* swap, size_t nmemb, Compare cmp)
 	quad3 = half2 / 2;
 	quad4 = half2 - quad3;
 
-	T* pta = array;
+	Iterator pta = array;
 
 	tail_swap(pta, swap, quad1, cmp); pta += quad1;
 	tail_swap(pta, swap, quad2, cmp); pta += quad2;
@@ -308,10 +326,13 @@ void tail_swap(T* array, T* swap, size_t nmemb, Compare cmp)
 
 // the next three functions create sorted blocks of 32 elements
 
-template<typename T>
-void quad_reversal(T* pta, T* ptz)
+template<typename Iterator>
+void quad_reversal(Iterator pta, Iterator ptz)
 {
-	T* ptb, *pty, tmp1, tmp2;
+	typedef std::remove_reference_t<decltype(*pta)> T;
+
+	Iterator ptb, pty;
+	T tmp1, tmp2;
 
 	size_t loop = (ptz - pta) / 2;
 
@@ -333,10 +354,10 @@ void quad_reversal(T* pta, T* ptz)
 	while (loop--);
 }
 
-template<typename T, typename Compare>
-void quad_swap_merge(T* array, T* swap, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void quad_swap_merge(Iterator array, T* swap, Compare cmp)
 {
-	T* pts, *ptl, *ptr;
+	Iterator pts, ptl, ptr;
 #if !defined __clang__
 	size_t x;
 #endif
@@ -346,15 +367,38 @@ void quad_swap_merge(T* array, T* swap, Compare cmp)
 	parity_merge_four(swap, array, x, ptl, ptr, pts, cmp);
 }
 
-template<typename T, typename Compare>
-void tail_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp);
-
-template<typename T, typename Compare>
-size_t quad_swap(T* array, size_t nmemb, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void tail_merge(Iterator array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
 {
+	Iterator pta, pte;
+
+	pte = array + nmemb;
+
+	while (block < nmemb && block <= swap_size)
+	{
+		for (pta = array; pta + block < pte; pta += block * 2)
+		{
+			if (pta + block * 2 < pte)
+			{
+				partial_backward_merge(pta, swap, swap_size, block * 2, block, cmp);
+
+				continue;
+			}
+			partial_backward_merge(pta, swap, swap_size, pte - pta, block, cmp);
+
+			break;
+		}
+		block *= 2;
+	}
+}
+template<typename Iterator, typename Compare>
+size_t quad_swap(Iterator array, size_t nmemb, Compare cmp)
+{
+	typedef std::remove_reference_t<decltype(*array)> T;
+
 	T tmp, swap[32];
 	size_t count;
-	T* pta, *pts;
+	Iterator pta, pts;
 	unsigned char v1, v2, v3, v4, x;
 	pta = array;
 
@@ -511,18 +555,25 @@ size_t quad_swap(T* array, size_t nmemb, Compare cmp)
 
 // The next six functions are quad merge support routines
 
-template<typename T, typename Compare>
-void cross_merge(T* dest, T* from, size_t left, size_t right, Compare cmp)
+template<typename OutputIt, typename InputIt, typename Compare>
+void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare cmp)
 {
-	T* ptl, *tpl, *ptr, *tpr, *ptd, *tpd;
+	typedef std::remove_cv_t<std::remove_reference_t<decltype(*dest)>> OutputT;
+	typedef std::remove_cv_t<std::remove_reference_t<decltype(*from)>> InputT;
+	static_assert (
+		std::is_same_v<OutputT, InputT>,
+		"output and input iterators must refer to the same type"
+	);
+	typedef std::remove_cv_t<std::remove_reference_t<decltype(*dest)>> T;
+
 	size_t loop;
 #if !defined __clang__
 	size_t x, y;
 #endif
-	ptl = from;
-	ptr = from + left;
-	tpl = ptr - 1;
-	tpr = tpl + right;
+	InputIt ptl = from;
+	InputIt ptr = from + left;
+	InputIt tpl = ptr - 1;
+	InputIt tpr = tpl + right;
 
 	if (left + 1 >= right && right >= left && left >= 32)
 	{
@@ -532,8 +583,8 @@ void cross_merge(T* dest, T* from, size_t left, size_t right, Compare cmp)
 			return;
 		}
 	}
-	ptd = dest;
-	tpd = dest + left + right - 1;
+	OutputIt ptd = dest;
+	OutputIt tpd = dest + left + right - 1;
 
 	while (1)
 	{
@@ -612,10 +663,10 @@ void cross_merge(T* dest, T* from, size_t left, size_t right, Compare cmp)
 	}
 }
 
-template<typename T, typename Compare>
-void quad_merge_block(T* array, T* swap, size_t block, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void quad_merge_block(Iterator array, T* swap, size_t block, Compare cmp)
 {
-	T* pt1, *pt2, *pt3;
+	Iterator pt1, pt2, pt3;
 	size_t block_x_2 = block * 2;
 
 	pt1 = array + block;
@@ -644,10 +695,10 @@ void quad_merge_block(T* array, T* swap, size_t block, Compare cmp)
 	cross_merge(array, swap, block_x_2, block_x_2, cmp);
 }
 
-template<typename T, typename Compare>
-size_t quad_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+size_t quad_merge(Iterator array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
 {
-	T* pta, *pte;
+	Iterator pta, pte;
 
 	pte = array + nmemb;
 
@@ -675,10 +726,11 @@ size_t quad_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t bloc
 	return block / 2;
 }
 
-template<typename T, typename Compare>
-void partial_forward_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void partial_forward_merge(Iterator array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
 {
-	T* ptl, *ptr, *tpl, *tpr;
+	T *ptl, *tpl;
+	Iterator ptr, tpr;
 	size_t x;
 
 	if (nmemb == block)
@@ -747,10 +799,10 @@ void partial_forward_merge(T* array, T* swap, size_t swap_size, size_t nmemb, si
 	}
 }
 
-template<typename T, typename Compare>
-void partial_backward_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void partial_backward_merge(Iterator array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
 {
-	T* tpl, *tpa, *tpr;
+	Iterator tpl, tpa, tpr;
 	size_t right, loop, x;
 
 	if (nmemb == block)
@@ -862,35 +914,10 @@ void partial_backward_merge(T* array, T* swap, size_t swap_size, size_t nmemb, s
 	}
 }
 
-template<typename T, typename Compare>
-void tail_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
-{
-	T* pta, *pte;
-
-	pte = array + nmemb;
-
-	while (block < nmemb && block <= swap_size)
-	{
-		for (pta = array ; pta + block < pte ; pta += block * 2)
-		{
-			if (pta + block * 2 < pte)
-			{
-				partial_backward_merge(pta, swap, swap_size, block * 2, block, cmp);
-
-				continue;
-			}
-			partial_backward_merge(pta, swap, swap_size, pte - pta, block, cmp);
-
-			break;
-		}
-		block *= 2;
-	}
-}
-
 // the next four functions provide in-place rotate merge support
 
-template<typename T>
-void trinity_rotation(T* array, T* swap, size_t swap_size, size_t nmemb, size_t left)
+template<typename T, typename Iterator>
+void trinity_rotation(Iterator array, T* swap, size_t swap_size, size_t nmemb, size_t left)
 {
 	T temp;
 	size_t bridge, right = nmemb - left;
@@ -1030,13 +1057,11 @@ void trinity_rotation(T* array, T* swap, size_t swap_size, size_t nmemb, size_t 
 	}
 }
 
-template<typename T, typename Compare>
-size_t monobound_binary_first(T* array, T* value, size_t top, Compare cmp)
+template<typename Iterator, typename Compare>
+size_t monobound_binary_first(Iterator array, Iterator value, size_t top, Compare cmp)
 {
-	T* end;
 	size_t mid;
-
-	end = array + top;
+	Iterator end = array + top;
 
 	while (top > 1)
 	{
@@ -1056,8 +1081,8 @@ size_t monobound_binary_first(T* array, T* value, size_t top, Compare cmp)
 	return (end - array);
 }
 
-template<typename T, typename Compare>
-void rotate_merge_block(T* array, T* swap, size_t swap_size, size_t lblock, size_t right, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void rotate_merge_block(Iterator array, T* swap, size_t swap_size, size_t lblock, size_t right, Compare cmp)
 {
 	size_t left, rblock, unbalanced;
 
@@ -1125,10 +1150,10 @@ void rotate_merge_block(T* array, T* swap, size_t swap_size, size_t lblock, size
 	}
 }
 
-template<typename T, typename Compare>
-void rotate_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void rotate_merge(Iterator array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
 {
-	T* pta, *pte;
+	Iterator pta, pte;
 
 	pte = array + nmemb;
 
@@ -1157,10 +1182,10 @@ void rotate_merge(T* array, T* swap, size_t swap_size, size_t nmemb, size_t bloc
 	}
 }
 
-template<typename T, typename Compare>
-void quadsort_swap(T* array, T* swap, size_t swap_size, size_t nmemb, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void quadsort_swap(Iterator array, T* swap, size_t swap_size, size_t nmemb, Compare cmp)
 {
-	T* pta = array;
+	Iterator pta = array;
 	T* pts = swap;
 
 	if (nmemb <= 96)

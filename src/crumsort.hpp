@@ -30,17 +30,17 @@ namespace scandum {
 
 namespace detail {
 
-template<typename T, typename Compare>
-void fulcrum_partition(T* array, T* swap, T* max, size_t swap_size, size_t nmemb, Compare cmp);
+template<typename T, typename Iterator, typename Compare>
+void fulcrum_partition(Iterator array, T* swap, T* max, size_t swap_size, size_t nmemb, Compare cmp);
 
-template<typename T, typename Compare>
-void crum_analyze(T* array, T* swap, size_t swap_size, size_t nmemb, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void crum_analyze(Iterator array, T* swap, size_t swap_size, size_t nmemb, Compare cmp)
 {
 	unsigned char loop, asum, bsum, csum, dsum;
 	unsigned int astreaks, bstreaks, cstreaks, dstreaks;
 	size_t quad1, quad2, quad3, quad4, half1, half2;
 	size_t cnt, abalance, bbalance, cbalance, dbalance;
-	T *pta, *ptb, *ptc, *ptd;
+	Iterator pta, ptb, ptc, ptd;
 
 	half1 = nmemb / 2;
 	quad1 = half1 / 2;
@@ -251,8 +251,8 @@ void crum_analyze(T* array, T* swap, size_t swap_size, size_t nmemb, Compare cmp
 
 // The next 4 functions are used for pivot selection
 
-template<typename T, typename Compare>
-T* crum_binary_median(T* pta, T* ptb, size_t len, Compare cmp)
+template<typename Iterator, typename Compare>
+Iterator crum_binary_median(Iterator pta, Iterator ptb, size_t len, Compare cmp)
 {
 	while (len /= 2)
 	{
@@ -261,10 +261,10 @@ T* crum_binary_median(T* pta, T* ptb, size_t len, Compare cmp)
 	return cmp(*pta, *ptb) > 0 ? pta : ptb;
 }
 
-template<typename T, typename Compare>
-T* crum_median_of_cbrt(T* array, T* swap, size_t swap_size, size_t nmemb, int *generic, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+Iterator crum_median_of_cbrt(Iterator array, T* swap, size_t swap_size, size_t nmemb, int *generic, Compare cmp)
 {
-	T* pta, *piv;
+	Iterator pta, piv;
 	size_t cnt, cbrt, div;
 
 	for (cbrt = 32 ; nmemb > cbrt * cbrt * cbrt && cbrt < swap_size ; cbrt *= 2) {}
@@ -291,8 +291,8 @@ T* crum_median_of_cbrt(T* array, T* swap, size_t swap_size, size_t nmemb, int *g
 	return crum_binary_median(piv, piv + cbrt, cbrt, cmp);
 }
 
-template<typename T, typename Compare>
-size_t crum_median_of_three(T* array, size_t v0, size_t v1, size_t v2, Compare cmp)
+template<typename Iterator, typename Compare>
+size_t crum_median_of_three(Iterator array, size_t v0, size_t v1, size_t v2, Compare cmp)
 {
 	size_t v[3] = {v0, v1, v2};
 	char x, y, z;
@@ -304,8 +304,8 @@ size_t crum_median_of_three(T* array, size_t v0, size_t v1, size_t v2, Compare c
 	return v[(x == y) + (y ^ z)];
 }
 
-template<typename T, typename Compare>
-T* crum_median_of_nine(T* array, size_t nmemb, Compare cmp)
+template<typename Iterator, typename Compare>
+Iterator crum_median_of_nine(Iterator array, size_t nmemb, Compare cmp)
 {
 	size_t x, y, z, div = nmemb / 16;
 
@@ -316,11 +316,11 @@ T* crum_median_of_nine(T* array, size_t nmemb, Compare cmp)
 	return array + crum_median_of_three(array, x, y, z, cmp);
 }
 
-template<typename T, typename Compare>
-size_t fulcrum_default_partition(T* array, T* swap, T* ptx, T* piv, size_t swap_size, size_t nmemb, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+size_t fulcrum_default_partition(Iterator array, T* swap, Iterator ptx, T* piv, size_t swap_size, size_t nmemb, Compare cmp)
 {
 	size_t i, cnt, val, m = 0;
-	T* ptl, *ptr, *pta, *tpa;
+	Iterator ptl, ptr, pta, tpa;
 
 	std::memcpy(swap, array, 32 * sizeof(T));
 	std::memcpy(swap + 32, array + nmemb - 32, 32 * sizeof(T));
@@ -383,8 +383,8 @@ size_t fulcrum_default_partition(T* array, T* swap, T* ptx, T* piv, size_t swap_
 
 // As per suggestion by Marshall Lochbaum to improve generic data handling by mimicking dual-pivot quicksort
 
-template<typename T, typename Compare>
-size_t fulcrum_reverse_partition(T* array, T* swap, T* ptx, T* piv, size_t swap_size, size_t nmemb, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+size_t fulcrum_reverse_partition(Iterator array, T* swap, Iterator ptx, T* piv, size_t swap_size, size_t nmemb, Compare cmp)
 {
 	size_t i, cnt, val, m = 0;
 	T* ptl, *ptr, *pta, *tpa;
@@ -448,11 +448,12 @@ size_t fulcrum_reverse_partition(T* array, T* swap, T* ptx, T* piv, size_t swap_
 	return m;
 }
 
-template<typename T, typename Compare>
-void fulcrum_partition(T* array, T* swap, T* max, size_t swap_size, size_t nmemb, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void fulcrum_partition(Iterator array, T* swap, T* max, size_t swap_size, size_t nmemb, Compare cmp)
 {
 	size_t a_size, s_size;
-	T* ptp, piv;
+	Iterator ptp;
+	T piv;
 	int generic = 0;
 
 	while (1)
@@ -510,13 +511,13 @@ void fulcrum_partition(T* array, T* swap, T* max, size_t swap_size, size_t nmemb
 			max = nullptr;
 			continue;
 		}
-		max = ptp;
+		max = &*ptp;
 	}
 	quadsort_swap(array, swap, swap_size, nmemb, cmp);
 }
 
-template<typename T, typename Compare>
-void crumsort_swap(T* array, T* swap, size_t swap_size, size_t nmemb, Compare cmp)
+template<typename T, typename Iterator, typename Compare>
+void crumsort_swap(Iterator array, T* swap, size_t swap_size, size_t nmemb, Compare cmp)
 {
 	if (nmemb <= 256)
 	{
@@ -524,18 +525,17 @@ void crumsort_swap(T* array, T* swap, size_t swap_size, size_t nmemb, Compare cm
 	}
 	else
 	{
-		T* pta = array;
-		T* pts = (T*)swap;
-
-		crum_analyze(pta, pts, swap_size, nmemb, cmp);
+		crum_analyze(array, swap, swap_size, nmemb, cmp);
 	}
 }
 
 } // namespace scandum::detail
 
-template<typename T, typename Compare>
-void crumsort(T* begin, const T* end, Compare cmp)
+template<typename Iterator, typename Compare>
+void crumsort(Iterator begin, const Iterator end, Compare cmp)
 {
+	typedef std::remove_reference_t<decltype(*begin)> T;
+
 	size_t nmemb = static_cast<size_t>(end - begin);
 
 	if (nmemb <= 256)
@@ -544,7 +544,6 @@ void crumsort(T* begin, const T* end, Compare cmp)
 		detail::quadsort_swap(begin, swap.data(), nmemb, nmemb, cmp);
 		return;
 	}
-	T* pta = (T*)begin;
 #if CRUM_AUX
 	size_t swap_size = CRUM_AUX;
 #else
@@ -556,12 +555,13 @@ void crumsort(T* begin, const T* end, Compare cmp)
 	}
 #endif
 	std::vector<T> swap(swap_size);
-	detail::crum_analyze(pta, swap.data(), swap_size, nmemb, cmp);
+	detail::crum_analyze(begin, swap.data(), swap_size, nmemb, cmp);
 }
 
-template<typename T, typename Compare>
-void crumsort(T* begin, const T* end)
+template<typename Iterator>
+void crumsort(Iterator begin, Iterator end)
 {
+	typedef std::remove_reference_t<decltype(*begin)> T;
 	return crumsort(begin, end, std::greater<T>());
 }
 

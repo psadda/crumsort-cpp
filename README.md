@@ -1,5 +1,5 @@
-Introduction
-------------
+Crumsort in C++
+===============
 
 This is a C to C++ port of Igor van den Hoven's crumsort.
 
@@ -14,6 +14,17 @@ This port is still a work in progress. As of now, it provides a type safe interf
 I will work on fixing these limitations as time allows.
 
 See the original C implementation at [scandum/crumsort](https://github.com/scandum/crumsort) for a detailed description of the algorithm and its properties.
+
+Progress
+--------
+
+- [x] Typesafe interface (no `void*`)
+- [x] Accept functors as the predicate
+- [x] Remove use of C99 VLAs
+- [ ] Accept any random access iterator (not just raw pointers)
+- [ ] Support nontrivial types (requires removing uses of `memcpy`, `memmove`, `memset`)
+- [ ] Support non-default-constructible types
+- [ ] Support move only types
 
 Example
 -------

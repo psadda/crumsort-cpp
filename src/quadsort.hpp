@@ -1,3 +1,6 @@
+#ifndef SCANDUM_QUADSORT_HPP
+#define SCANDUM_QUADSORT_HPP
+
 // quadsort 1.2.1.3 - Igor van den Hoven ivdhoven@gmail.com
 
 #include <cstring>
@@ -1221,3 +1224,5 @@ void quadsort(T* array, size_t nmemb, Compare cmp)
 #undef parity_merge_four
 #undef branchless_swap
 #undef swap_branchless
+
+#endif

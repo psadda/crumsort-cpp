@@ -1,3 +1,6 @@
+#ifndef SCANDUM_CRUMSORT_HPP
+#define SCANDUM_CRUMSORT_HPP
+
 // crumsort 1.2.1.3 - Igor van den Hoven ivdhoven@gmail.com
 
 // When sorting an array of pointers, like a string array, the QUAD_CACHE needs
@@ -563,3 +566,5 @@ void crumsort(T* begin, const T* end)
 }
 
 } // namespace scandum
+
+#endif

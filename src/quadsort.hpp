@@ -1236,10 +1236,11 @@ void quadsort_swap(Iterator array, T* swap, size_t swap_size, size_t nmemb, Comp
 
 } // namespace scandum::detail
 
-template<typename T, typename Compare>
-void quadsort(T* array, size_t nmemb, Compare cmp)
+template<typename Iterator, typename Compare>
+void quadsort(Iterator begin, Iterator end, Compare cmp)
 {
-	T* pta = (T*)array;
+	size_t nmemb = std::distance(begin, end);
+	Iterator pta = array;
 
 	if (nmemb < 32)
 	{
@@ -1270,6 +1271,13 @@ void quadsort(T* array, size_t nmemb, Compare cmp)
 
 		detail::rotate_merge(pta, swap.data(), swap_size, nmemb, block, cmp);
 	}
+}
+
+template<typename Iterator>
+void quadsort(Iterator begin, Iterator end)
+{
+	typedef std::remove_reference_t<decltype(*begin)> T;
+	return quadsort(begin, end, std::greater<T>());
 }
 
 } // namespace scandum

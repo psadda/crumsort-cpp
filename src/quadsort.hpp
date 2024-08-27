@@ -3,6 +3,8 @@
 
 // quadsort 1.2.1.3 - Igor van den Hoven ivdhoven@gmail.com
 
+#include <algorithm>   // for std::copy
+#include <cassert>
 #include <cstring>     // for std::memcpy, std::memmove, std::memset
 #include <type_traits>
 
@@ -27,6 +29,7 @@
 	} \
 	else \
 	{ \
+		assert((output) < (input) || (output) > (input) + (length)); \
 		std::copy_backward(input, (input) + (length), output); \
 	}
 
@@ -164,8 +167,8 @@ void parity_swap_six(Iterator array, T* swap, Compare cmp)
 {
 	T tmp;
 	Iterator pta = array;
-	Iterator ptl;
-	Iterator ptr;
+	T* ptl;
+	T* ptr;
 	size_t x, y;
 
 	scandum_branchless_swap(pta, tmp, x, cmp); pta++;
@@ -200,8 +203,8 @@ void parity_swap_seven(Iterator array, T* swap, Compare cmp)
 {
 	T tmp;
 	Iterator pta = array;
-	Iterator ptl;
-	Iterator ptr;
+	T* ptl;
+	T* ptr;
 	size_t x, y;
 
 	scandum_branchless_swap(pta, tmp, x, cmp); pta += 2;
@@ -382,14 +385,19 @@ void quad_reversal(Iterator pta, Iterator ptz)
 template<typename T, typename Iterator, typename Compare>
 void quad_swap_merge(Iterator array, T* swap, Compare cmp)
 {
-	Iterator pts, ptl, ptr;
+	T* pts;
+	Iterator ptl;
+	Iterator ptr;
 #if !defined __clang__
 	size_t x;
 #endif
 	scandum_parity_merge_two(array + 0, swap + 0, x, ptl, ptr, pts, cmp);
 	scandum_parity_merge_two(array + 4, swap + 4, x, ptl, ptr, pts, cmp);
 
-	scandum_parity_merge_four(swap, array, x, ptl, ptr, pts, cmp);
+	Iterator pts2;
+	T* ptl2;
+	T* ptr2;
+	scandum_parity_merge_four(swap, array, x, ptl2, ptr2, pts2, cmp);
 }
 
 template<typename T, typename Iterator, typename Compare>
@@ -827,7 +835,8 @@ void partial_forward_merge(Iterator array, T* swap, size_t swap_size, size_t nme
 template<typename T, typename Iterator, typename Compare>
 void partial_backward_merge(Iterator array, T* swap, size_t swap_size, size_t nmemb, size_t block, Compare cmp)
 {
-	Iterator tpl, tpa, tpr;
+	Iterator tpl, tpa;
+	T* tpr;
 	size_t right, loop, x;
 
 	if (nmemb == block)
@@ -962,7 +971,7 @@ void trinity_rotation(Iterator array, T* swap, size_t swap_size, size_t nmemb, s
 		}
 		else
 		{
-			T* pta, *ptb, *ptc, *ptd;
+			Iterator pta, ptb, ptc, ptd;
 
 			pta = array;
 			ptb = pta + left;
@@ -1020,7 +1029,7 @@ void trinity_rotation(Iterator array, T* swap, size_t swap_size, size_t nmemb, s
 		}
 		else
 		{
-			T* pta, *ptb, *ptc, *ptd;
+			Iterator pta, ptb, ptc, ptd;
 
 			pta = array;
 			ptb = pta + left;
@@ -1070,7 +1079,7 @@ void trinity_rotation(Iterator array, T* swap, size_t swap_size, size_t nmemb, s
 	}
 	else
 	{
-		T* pta, *ptb;
+		Iterator pta, ptb;
 
 		pta = array;
 		ptb = pta + left;

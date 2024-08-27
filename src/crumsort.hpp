@@ -369,14 +369,14 @@ size_t fulcrum_default_partition(Iterator array, T* swap, Iterator ptx, T* piv, 
 			val = cmp(*tpa, *piv) <= 0; ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
 		}
 	}
-	pta = swap;
+	T* pta2 = swap;
 
 	for (cnt = 16 ; cnt ; cnt--)
 	{
-		val = cmp(*pta, *piv) <= 0; ptl[m] = ptr[m] = *pta++; m += val; ptr--;
-		val = cmp(*pta, *piv) <= 0; ptl[m] = ptr[m] = *pta++; m += val; ptr--;
-		val = cmp(*pta, *piv) <= 0; ptl[m] = ptr[m] = *pta++; m += val; ptr--;
-		val = cmp(*pta, *piv) <= 0; ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+		val = cmp(*pta2, *piv) <= 0; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = cmp(*pta2, *piv) <= 0; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = cmp(*pta2, *piv) <= 0; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = cmp(*pta2, *piv) <= 0; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
 	}
 	return m;
 }
@@ -387,7 +387,7 @@ template<typename T, typename Iterator, typename Compare>
 size_t fulcrum_reverse_partition(Iterator array, T* swap, Iterator ptx, T* piv, size_t swap_size, size_t nmemb, Compare cmp)
 {
 	size_t i, cnt, val, m = 0;
-	T* ptl, *ptr, *pta, *tpa;
+	Iterator ptl, ptr, pta, tpa;
 
 	scandum_copy_range(T, swap, array, 32);
 	scandum_copy_range(T, swap + 32, array + nmemb - 32, 32);
@@ -436,14 +436,14 @@ size_t fulcrum_reverse_partition(Iterator array, T* swap, Iterator ptx, T* piv, 
 			val = cmp(*piv, *tpa) > 0; ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
 		}
 	}
-	pta = swap;
+	T* pta2 = swap;
 
 	for (cnt = 16 ; cnt ; cnt--)
 	{
-		val = cmp(*piv, *pta) > 0; ptl[m] = ptr[m] = *pta++; m += val; ptr--;
-		val = cmp(*piv, *pta) > 0; ptl[m] = ptr[m] = *pta++; m += val; ptr--;
-		val = cmp(*piv, *pta) > 0; ptl[m] = ptr[m] = *pta++; m += val; ptr--;
-		val = cmp(*piv, *pta) > 0; ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+		val = cmp(*piv, *pta2) > 0; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = cmp(*piv, *pta2) > 0; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = cmp(*piv, *pta2) > 0; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = cmp(*piv, *pta2) > 0; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
 	}
 	return m;
 }

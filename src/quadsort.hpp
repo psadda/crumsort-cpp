@@ -1249,28 +1249,26 @@ void quadsort(T* array, size_t nmemb, Compare cmp)
 	}
 	else if (detail::quad_swap(pta, nmemb, cmp) == 0)
 	{
-		T* swap = NULL;
 		size_t block, swap_size = nmemb;
 
 		if (nmemb > 4194304) for (swap_size = 4194304 ; swap_size * 8 <= nmemb ; swap_size *= 4) {}
 
-		swap = (T*)std::malloc(swap_size * sizeof(T));
+		std::vector<T> swap(swap_size);
 
-		if (swap == NULL)
-		{
-			T stack[512];
+		// TODO: consider adding this path back as an optimization
+		//if (swap == NULL)
+		//{
+		//	T stack[512];
 
-			block = detail::quad_merge(pta, stack, 512, nmemb, 32, cmp);
+		//	block = detail::quad_merge(pta, stack, 512, nmemb, 32, cmp);
 
-			detail::rotate_merge(pta, stack, 512, nmemb, block, cmp);
+		//	detail::rotate_merge(pta, stack, 512, nmemb, block, cmp);
 
-			return;
-		}
-		block = detail::quad_merge(pta, swap, swap_size, nmemb, 32, cmp);
+		//	return;
+		//}
+		block = detail::quad_merge(pta, swap.data(), swap_size, nmemb, 32, cmp);
 
-		detail::rotate_merge(pta, swap, swap_size, nmemb, block, cmp);
-
-		std::free(swap);
+		detail::rotate_merge(pta, swap.data(), swap_size, nmemb, block, cmp);
 	}
 }
 

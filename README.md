@@ -5,7 +5,7 @@ This is a C99 to C++17 port of Igor van den Hoven's crumsort and quadsort.
 
 Porting crumsort and quadsort to C++ is not as trivial as one might expect. The original implementation has many C-isms that don't map well to modern C++ and prevent it from being used as a drop in replacement for `std::sort`:
 
-- It uses pointers, not random access iterators. This means that crumsort only works on arrays of contiguous memory, like `std::vector`, and not on discontiguous containers, like `std::deque`.
+- It uses pointers, not random access iterators. This means that the original crumsort and quadsort only work on arrays of contiguous memory, like `std::vector`, and not on discontiguous containers, like `std::deque`.
 - It assumes that that the sorted type is [trivial](https://en.cppreference.com/w/cpp/named_req/TrivialType).
 - It uses variable length arrays, which some C++ compilers do not support (MSVC) since VLAs are not part of the C++ standard.
 

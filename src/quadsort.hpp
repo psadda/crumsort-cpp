@@ -24,7 +24,9 @@
 	}
 
 #define scandum_copy_overlapping_range(T, output, input, length) \
-	if constexpr (std::is_trivially_copyable_v<T> && std::is_same_v<decltype(input), T*>) \
+	if constexpr (std::is_trivially_copyable_v<T> && \
+		std::is_same_v<decltype(input), T*> && \
+		std::is_same_v<decltype(output), T*>) \
 	{ \
 		std::memmove(output, input, (length) * sizeof(T)); \
 	} \

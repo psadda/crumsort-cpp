@@ -1242,12 +1242,14 @@ void quadsort_swap(Iterator array, T* swap, size_t swap_size, size_t nmemb, Comp
 template<typename Iterator, typename Compare>
 void quadsort(Iterator begin, Iterator end, Compare cmp)
 {
+	typedef std::remove_reference_t<decltype(*begin)> T;
+
 	size_t nmemb = std::distance(begin, end);
 	Iterator pta = array;
 
 	if (nmemb < 32)
 	{
-		T swap[nmemb];
+		std::vector<T> swap(nmemb);
 
 		detail::tail_swap(pta, swap, nmemb, cmp);
 	}

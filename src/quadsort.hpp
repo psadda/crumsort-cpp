@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstring>     // for std::memcpy, std::memmove, std::memset
 #include <type_traits>
+#include <vector>
 
 // universal copy functions to handle both trivially and nontrivially copyable types
 

@@ -21,8 +21,6 @@
 
 #include "quadsort.hpp"
 
-#include <vector>
-
 #define CRUM_AUX  512
 #define CRUM_OUT   96
 

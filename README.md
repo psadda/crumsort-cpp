@@ -48,6 +48,7 @@ Progress
 - [ ] Support types that do not have *any* default constructor
 - [ ] Support move only types
 - [ ] Re-enable optimizations for primitive types
+- [ ] Update benchmarks
 
 License
 -------

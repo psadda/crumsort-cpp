@@ -560,7 +560,7 @@ template<typename Iterator>
 void crumsort(Iterator begin, Iterator end)
 {
 	typedef std::remove_reference_t<decltype(*begin)> T;
-	return crumsort(begin, end, std::greater<T>());
+	return crumsort(begin, end, std::less<T>());
 }
 
 } // namespace scandum

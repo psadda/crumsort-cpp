@@ -1280,7 +1280,7 @@ template<typename Iterator>
 void quadsort(Iterator begin, Iterator end)
 {
 	typedef std::remove_reference_t<decltype(*begin)> T;
-	return quadsort(begin, end, std::greater<T>());
+	return quadsort(begin, end, std::less<T>());
 }
 
 } // namespace scandum

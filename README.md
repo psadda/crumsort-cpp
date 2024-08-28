@@ -3,15 +3,15 @@ Crumsort and Quadsort in C++
 
 This is a C99 to C++17 port of Igor van den Hoven's crumsort and quadsort.
 
-Porting crumsort and quadsort to C++ is not as trivial as one might expect. The original implementation has many C-isms that don't map well to modern C++ and prevent it from being used as a drop in replacement for `std::sort`:
+Porting crumsort and quadsort to C++ is not as trivial as one might expect. The original crumsort and quadsort have many C-isms that don't map well to modern C++, preventing them from being used as drop in replacements for `std::sort`:
 
-- It uses pointers, not random access iterators. This means that the original crumsort and quadsort only work on arrays of contiguous memory, like `std::vector`, and not on discontiguous containers, like `std::deque`.
-- It assumes that that the sorted type is [trivial](https://en.cppreference.com/w/cpp/named_req/TrivialType).
-- It uses variable length arrays, which some C++ compilers do not support (MSVC) since VLAs are not part of the C++ standard.
+- They take raw pointers as input, not random access iterators. That means they only work for arrays of contiguous memory, like `std::vector`, and not on discontiguous containers, like `std::deque`.
+- They use C99 variable length arrays, which are not part of the C++ standard. Some C++ compilers support VLAs as a language extension, but others (MSVC) do not.
+- They assume that that the sorted type is [trivial](https://en.cppreference.com/w/cpp/named_req/TrivialType).
 
 I will work on fixing these limitations as time allows.
 
-See the original C implementation at [scandum/crumsort](https://github.com/scandum/crumsort) for a detailed description of the algorithm and its properties.
+See the original C implementations at [scandum/crumsort](https://github.com/scandum/crumsort) and [scandum/quadsort](https://github.com/scandum/quadsort) for detailed descriptions of the algorithms and their properties.
 
 Example
 -------
@@ -47,6 +47,7 @@ Progress
 - [x] Support types that do not a have a trivial default constructor
 - [ ] Support types that do not have *any* default constructor
 - [ ] Support move only types
+- [ ] Re-enable optimizations for primitive types
 
 License
 -------

@@ -1,4 +1,4 @@
-Crumsort and in Quadsort C++
+Crumsort and Quadsort in C++
 ============================
 
 This is a C99 to C++17 port of Igor van den Hoven's crumsort and quadsort.

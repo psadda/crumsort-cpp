@@ -26,7 +26,7 @@ Example
 int main(int argc, char** argv) {
     std::vector<int> list = { 1, 4, 0, 7, 1, 12 };
 
-    scandum::crumsort(list.begin(), list.end(), std::greater<int>());
+    scandum::crumsort(list.begin(), list.end(), std::less<int>());
 
     for (int value : list) {
         std::cout << value << '\n';
@@ -47,7 +47,6 @@ Progress
 - [ ] Support types that do not a have a trivial default constructor
 - [ ] Support types that do not have *any* default constructor
 - [ ] Support move only types
-- [ ] Use a less-than predicate instead of a greater-than predicate
 
 License
 -------

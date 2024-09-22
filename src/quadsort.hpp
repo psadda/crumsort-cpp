@@ -1245,13 +1245,13 @@ void quadsort(Iterator begin, Iterator end, Compare cmp)
 	typedef std::remove_reference_t<decltype(*begin)> T;
 
 	size_t nmemb = std::distance(begin, end);
-	Iterator pta = array;
+	Iterator pta = begin;
 
 	if (nmemb < 32)
 	{
 		std::vector<T> swap(nmemb);
 
-		detail::tail_swap(pta, swap, nmemb, cmp);
+		detail::tail_swap(pta, swap.data(), nmemb, cmp);
 	}
 	else if (detail::quad_swap(pta, nmemb, cmp) == 0)
 	{

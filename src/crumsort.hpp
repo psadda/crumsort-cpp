@@ -21,7 +21,6 @@
 
 #include "quadsort.hpp"
 
-#define CRUM_AUX  512
 #define CRUM_OUT   96
 
 // comparison functions
@@ -535,7 +534,7 @@ void crumsort_swap(Iterator array, T* swap, size_t swap_size, size_t nmemb, Comp
 } // namespace scandum::detail
 
 template<typename Iterator, typename Compare>
-void crumsort(Iterator begin, const Iterator end, Compare cmp)
+void crumsort(Iterator begin, const Iterator end, Compare cmp, size_t max_swap_size = 512)
 {
 	typedef std::remove_reference_t<decltype(*begin)> T;
 
@@ -547,18 +546,8 @@ void crumsort(Iterator begin, const Iterator end, Compare cmp)
 		detail::quadsort_swap(begin, swap.data(), nmemb, nmemb, cmp);
 		return;
 	}
-#if CRUM_AUX
-	size_t swap_size = CRUM_AUX;
-#else
-	size_t swap_size = 128;
-
-	while (swap_size * swap_size <= nmemb)
-	{
-		swap_size *= 4;
-	}
-#endif
-	std::vector<T> swap(swap_size);
-	detail::crum_analyze(begin, swap.data(), swap_size, nmemb, cmp);
+	std::vector<T> swap(max_swap_size);
+	detail::crum_analyze(begin, swap.data(), max_swap_size, nmemb, cmp);
 }
 
 template<typename Iterator>

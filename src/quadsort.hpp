@@ -9,6 +9,11 @@
 #include <type_traits>
 #include <vector>
 
+// comparison functions
+
+#define scandum_greater(less, lhs, rhs) less(rhs, lhs)
+#define scandum_not_greater(less, lhs, rhs) (less(lhs, rhs) || !less(rhs, lhs))
+
 // universal copy functions to handle both trivially and nontrivially copyable types
 
 #define scandum_copy_range(T, output, input, length) \
@@ -41,7 +46,7 @@
 
 #if !defined __clang__
 #define scandum_head_branchless_merge(ptd, x, ptl, ptr, cmp)  \
-	x = cmp(*ptl, *ptr) == true;  \
+	x = scandum_not_greater(cmp, *ptl, *ptr);  \
 	*ptd = *ptl;  \
 	ptl += x;  \
 	ptd[x] = *ptr;  \
@@ -49,12 +54,12 @@
 	ptd++;
 #else
 #define scandum_head_branchless_merge(ptd, x, ptl, ptr, cmp)  \
-	*ptd++ = cmp(*ptl, *ptr) == true ? *ptl++ : *ptr++;
+	*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
 #endif
 
 #if !defined __clang__
 #define scandum_tail_branchless_merge(tpd, y, tpl, tpr, cmp)  \
-	y = cmp(*tpl, *tpr) == true;  \
+	y = scandum_not_greater(cmp, *tpl, *tpr);  \
 	*tpd = *tpl;  \
 	tpl -= !y;  \
 	tpd--;  \
@@ -62,7 +67,7 @@
 	tpr -= y;
 #else
 #define scandum_tail_branchless_merge(tpd, x, tpl, tpr, cmp)  \
-	*tpd-- = cmp(*tpl, *tpr) == false ? *tpl-- : *tpr--;
+	*tpd-- = scandum_greater(cmp, *tpl, *tpr) ? *tpl-- : *tpr--;
 #endif
 
 // guarantee small parity merges are inlined with minimal overhead
@@ -70,7 +75,7 @@
 #define scandum_parity_merge_two(array, swap, x, ptl, ptr, pts, cmp)  \
 	ptl = array; ptr = array + 2; pts = swap;  \
 	scandum_head_branchless_merge(pts, x, ptl, ptr, cmp);  \
-	*pts = cmp(*ptl, *ptr) == true ? *ptl : *ptr;  \
+	*pts = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl : *ptr;  \
   \
 	ptl = array + 1; ptr = array + 3; pts = swap + 3;  \
 	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
@@ -81,7 +86,7 @@
 	scandum_head_branchless_merge(pts, x, ptl, ptr, cmp);  \
 	scandum_head_branchless_merge(pts, x, ptl, ptr, cmp);  \
 	scandum_head_branchless_merge(pts, x, ptl, ptr, cmp);  \
-	*pts = cmp(*ptl, *ptr) == true ? *ptl : *ptr;  \
+	*pts = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl : *ptr;  \
   \
 	ptl = array + 3; ptr = array + 7; pts = swap + 7;  \
 	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
@@ -92,20 +97,20 @@
 
 #if !defined __clang__
 #define scandum_branchless_swap(pta, swap, x, cmp)  \
-	x = cmp(*pta, *(pta + 1)) == false;  \
+	x = scandum_greater(cmp, *pta, *(pta + 1));  \
 	swap = pta[!x];  \
 	pta[0] = pta[x];  \
 	pta[1] = swap;
 #else
 #define scandum_branchless_swap(pta, swap, x, cmp)  \
 	x = 0;  \
-	swap = cmp(*pta, *(pta + 1)) == false ? pta[x++] : pta[1];  \
+	swap = scandum_greater(cmp, *pta, *(pta + 1)) ? pta[x++] : pta[1];  \
 	pta[0] = pta[x];  \
 	pta[1] = swap;
 #endif
 
 #define scandum_swap_branchless(pta, swap, x, y, cmp)  \
-	x = cmp(*pta, *(pta + 1)) == false;  \
+	x = scandum_greater(cmp, *pta, *(pta + 1));  \
 	y = !x;  \
 	swap = pta[y];  \
 	pta[0] = pta[x];  \
@@ -130,7 +135,7 @@ void parity_swap_four(Iterator array, Compare cmp)
 	scandum_branchless_swap(pta, tmp, x, cmp); pta += 2;
 	scandum_branchless_swap(pta, tmp, x, cmp); pta--;
 
-	if (cmp(*pta, *(pta + 1)) == false)
+	if (scandum_greater(cmp, *pta, *(pta + 1)))
 	{
 		tmp = pta[0]; pta[0] = pta[1]; pta[1] = tmp; pta--;
 
@@ -179,14 +184,14 @@ void parity_swap_six(Iterator array, T* swap, Compare cmp)
 	scandum_branchless_swap(pta, tmp, x, cmp); pta--;
 	scandum_branchless_swap(pta, tmp, x, cmp); pta = array;
 
-	if (cmp(*(pta + 2), *(pta + 3)) == true)
+	if (scandum_not_greater(cmp, *(pta + 2), *(pta + 3)))
 	{
 		scandum_branchless_swap(pta, tmp, x, cmp); pta += 4;
 		scandum_branchless_swap(pta, tmp, x, cmp);
 		return;
 	}
-	x = cmp(*pta, *(pta + 1)) == false; y = !x; swap[0] = pta[x]; swap[1] = pta[y]; swap[2] = pta[2]; pta += 4;
-	x = cmp(*pta, *(pta + 1)) == false; y = !x; swap[4] = pta[x]; swap[5] = pta[y]; swap[3] = pta[-1];
+	x = scandum_greater(cmp, *pta, *(pta + 1)); y = !x; swap[0] = pta[x]; swap[1] = pta[y]; swap[2] = pta[2]; pta += 4;
+	x = scandum_greater(cmp, *pta, *(pta + 1)); y = !x; swap[4] = pta[x]; swap[5] = pta[y]; swap[3] = pta[-1];
 
 	pta = array; ptl = swap; ptr = swap + 3;
 
@@ -221,9 +226,9 @@ void parity_swap_seven(Iterator array, T* swap, Compare cmp)
 
 	scandum_branchless_swap(pta, tmp, x, cmp); pta = array;
 
-	x = cmp(*pta, *(pta + 1)) == false; swap[0] = pta[x]; swap[1] = pta[!x]; swap[2] = pta[2]; pta += 3;
-	x = cmp(*pta, *(pta + 1)) == false; swap[3] = pta[x]; swap[4] = pta[!x]; pta += 2;
-	x = cmp(*pta, *(pta + 1)) == false; swap[5] = pta[x]; swap[6] = pta[!x];
+	x = scandum_greater(cmp, *pta, *(pta + 1)); swap[0] = pta[x]; swap[1] = pta[!x]; swap[2] = pta[2]; pta += 3;
+	x = scandum_greater(cmp, *pta, *(pta + 1)); swap[3] = pta[x]; swap[4] = pta[!x]; pta += 2;
+	x = scandum_greater(cmp, *pta, *(pta + 1)); swap[5] = pta[x]; swap[6] = pta[!x];
 
 	pta = array; ptl = swap; ptr = swap + 3;
 
@@ -236,7 +241,7 @@ void parity_swap_seven(Iterator array, T* swap, Compare cmp)
 	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
 	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
 	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
-	*pta = cmp(*ptl, *ptr) == false ? *ptl : *ptr;
+	*pta = scandum_greater(cmp, *ptl, *ptr) ? *ptl : *ptr;
 }
 
 template<typename T, typename Iterator, typename Compare>
@@ -297,16 +302,16 @@ void parity_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compar
 
 	if (left < right)
 	{
-		*ptd++ = cmp(*ptl, *ptr) == true ? *ptl++ : *ptr++;
+		*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
 	}
-	*ptd++ = cmp(*ptl, *ptr) == true ? *ptl++ : *ptr++;
+	*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
 
 #if !defined cmp && !defined __clang__ // cache limit workaround for gcc
 	if (left > QUAD_CACHE)
 	{
 		while (--left)
 		{
-			*ptd++ = cmp(*ptl, *ptr) == true ? *ptl++ : *ptr++;
+			*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
 			*tpd-- = cmp(*tpl, *tpr)  == false ? *tpl-- : *tpr--;
 		}
 	}
@@ -346,7 +351,7 @@ void tail_swap(Iterator array, T* swap, size_t nmemb, Compare cmp)
 	tail_swap(pta, swap, quad3, cmp); pta += quad3;
 	tail_swap(pta, swap, quad4, cmp);
 
-	if (cmp(*(array + quad1 - 1), *(array + quad1)) == true && cmp(*(array + half1 - 1), *(array + half1)) == true && cmp(*(pta - 1), *pta) == true)
+	if (scandum_not_greater(cmp, *(array + quad1 - 1), *(array + quad1)) && scandum_not_greater(cmp, *(array + half1 - 1), *(array + half1)) && scandum_not_greater(cmp, *(pta - 1), *pta))
 	{
 		return;
 	}
@@ -443,15 +448,15 @@ size_t quad_swap(Iterator array, size_t nmemb, Compare cmp)
 
 	while (count--)
 	{
-		v1 = cmp(*(pta + 0), *(pta + 1)) == false;
-		v2 = cmp(*(pta + 2), *(pta + 3)) == false;
-		v3 = cmp(*(pta + 4), *(pta + 5)) == false;
-		v4 = cmp(*(pta + 6), *(pta + 7)) == false;
+		v1 = scandum_greater(cmp, *(pta + 0), *(pta + 1));
+		v2 = scandum_greater(cmp, *(pta + 2), *(pta + 3));
+		v3 = scandum_greater(cmp, *(pta + 4), *(pta + 5));
+		v4 = scandum_greater(cmp, *(pta + 6), *(pta + 7));
 
 		switch (v1 + v2 * 2 + v3 * 4 + v4 * 8)
 		{
 			case 0:
-				if (cmp(*(pta + 1), *(pta + 2)) == true && cmp(*(pta + 3), *(pta + 4)) == true && cmp(*(pta + 5), *(pta + 6)) == true)
+				if (scandum_not_greater(cmp, *(pta + 1), *(pta + 2)) && scandum_not_greater(cmp, *(pta + 3), *(pta + 4)) && scandum_not_greater(cmp, *(pta + 5), *(pta + 6)))
 				{
 					goto ordered;
 				}
@@ -459,7 +464,7 @@ size_t quad_swap(Iterator array, size_t nmemb, Compare cmp)
 				break;
 
 			case 15:
-				if (cmp(*(pta + 1), *(pta + 2)) == false && cmp(*(pta + 3), *(pta + 4)) == false && cmp(*(pta + 5), *(pta + 6)) == false)
+				if (scandum_greater(cmp, *(pta + 1), *(pta + 2)) && scandum_greater(cmp, *(pta + 3), *(pta + 4)) && scandum_greater(cmp, *(pta + 5), *(pta + 6)))
 				{
 					pts = pta;
 					goto reversed;
@@ -484,16 +489,16 @@ size_t quad_swap(Iterator array, size_t nmemb, Compare cmp)
 
 		if (count--)
 		{
-			if ((v1 = cmp(*(pta + 0), *(pta + 1)) == false) | (v2 = cmp(*(pta + 2), *(pta + 3)) == false) | (v3 = cmp(*(pta + 4), *(pta + 5)) == false) | (v4 = cmp(*(pta + 6), *(pta + 7)) == false))
+			if ((v1 = scandum_greater(cmp, *(pta + 0), *(pta + 1))) | (v2 = scandum_greater(cmp, *(pta + 2), *(pta + 3))) | (v3 = scandum_greater(cmp, *(pta + 4), *(pta + 5))) | (v4 = scandum_greater(cmp, *(pta + 6), *(pta + 7))))
 			{
-				if (v1 + v2 + v3 + v4 == 4 && cmp(*(pta + 1), *(pta + 2)) == false && cmp(*(pta + 3), *(pta + 4)) == false && cmp(*(pta + 5), *(pta + 6)) == false)
+				if (v1 + v2 + v3 + v4 == 4 && scandum_greater(cmp, *(pta + 1), *(pta + 2)) && scandum_greater(cmp, *(pta + 3), *(pta + 4)) && scandum_greater(cmp, *(pta + 5), *(pta + 6)))
 				{
 					pts = pta;
 					goto reversed;
 				}
 				goto not_ordered;
 			}
-			if (cmp(*(pta + 1), *(pta + 2)) == true && cmp(*(pta + 3), *(pta + 4)) == true && cmp(*(pta + 5), *(pta + 6)) == true)
+			if (scandum_not_greater(cmp, *(pta + 1), *(pta + 2)) && scandum_not_greater(cmp, *(pta + 3), *(pta + 4)) && scandum_not_greater(cmp, *(pta + 5), *(pta + 6)))
 			{
 				goto ordered;
 			}
@@ -509,20 +514,20 @@ size_t quad_swap(Iterator array, size_t nmemb, Compare cmp)
 
 		if (count--)
 		{
-			if ((v1 = cmp(*(pta + 0), *(pta + 1)) == true) | (v2 = cmp(*(pta + 2), *(pta + 3)) == true) | (v3 = cmp(*(pta + 4), *(pta + 5)) == true) | (v4 = cmp(*(pta + 6), *(pta + 7)) == true))
+			if ((v1 = scandum_not_greater(cmp, *(pta + 0), *(pta + 1))) | (v2 = scandum_not_greater(cmp, *(pta + 2), *(pta + 3))) | (v3 = scandum_not_greater(cmp, *(pta + 4), *(pta + 5))) | (v4 = scandum_not_greater(cmp, *(pta + 6), *(pta + 7))))
 			{
 				// not reversed
 			}
 			else
 			{
-				if (cmp(*(pta - 1), *pta) == false && cmp(*(pta + 1), *(pta + 2)) == false && cmp(*(pta + 3), *(pta + 4)) == false && cmp(*(pta + 5), *(pta + 6)) == false)
+				if (scandum_greater(cmp, *(pta - 1), *pta) && scandum_greater(cmp, *(pta + 1), *(pta + 2)) && scandum_greater(cmp, *(pta + 3), *(pta + 4)) && scandum_greater(cmp, *(pta + 5), *(pta + 6)))
 				{
 					goto reversed;
 				}
 			}
 			quad_reversal(pts, pta - 1);
 
-			if (v1 + v2 + v3 + v4 == 4 && cmp(*(pta + 1), *(pta + 2)) == true && cmp(*(pta + 3), *(pta + 4)) == true && cmp(*(pta + 5), *(pta + 6)) == true)
+			if (v1 + v2 + v3 + v4 == 4 && scandum_not_greater(cmp, *(pta + 1), *(pta + 2)) && scandum_not_greater(cmp, *(pta + 3), *(pta + 4)) && scandum_not_greater(cmp, *(pta + 5), *(pta + 6)))
 			{
 				goto ordered;
 			}
@@ -537,7 +542,7 @@ size_t quad_swap(Iterator array, size_t nmemb, Compare cmp)
 			x = !v3; tmp = pta[v3]; pta[0] = pta[x]; pta[1] = tmp; pta += 2;
 			x = !v4; tmp = pta[v4]; pta[0] = pta[x]; pta[1] = tmp; pta -= 6;
 
-			if (cmp(*(pta + 1), *(pta + 2)) == false || cmp(*(pta + 3), *(pta + 4)) == false || cmp(*(pta + 5), *(pta + 6)) == false)
+			if (scandum_greater(cmp, *(pta + 1), *(pta + 2)) || scandum_greater(cmp, *(pta + 3), *(pta + 4)) || scandum_greater(cmp, *(pta + 5), *(pta + 6)))
 			{
 				quad_swap_merge(pta, swap, cmp);
 			}
@@ -547,13 +552,13 @@ size_t quad_swap(Iterator array, size_t nmemb, Compare cmp)
 
 		switch (nmemb % 8)
 		{
-			case 7: if (cmp(*(pta + 5), *(pta + 6)) == true) break;
-			case 6: if (cmp(*(pta + 4), *(pta + 5)) == true) break;
-			case 5: if (cmp(*(pta + 3), *(pta + 4)) == true) break;
-			case 4: if (cmp(*(pta + 2), *(pta + 3)) == true) break;
-			case 3: if (cmp(*(pta + 1), *(pta + 2)) == true) break;
-			case 2: if (cmp(*(pta + 0), *(pta + 1)) == true) break;
-			case 1: if (cmp(*(pta - 1), *(pta + 0)) == true) break;
+			case 7: if (scandum_not_greater(cmp, *(pta + 5), *(pta + 6))) break;
+			case 6: if (scandum_not_greater(cmp, *(pta + 4), *(pta + 5))) break;
+			case 5: if (scandum_not_greater(cmp, *(pta + 3), *(pta + 4))) break;
+			case 4: if (scandum_not_greater(cmp, *(pta + 2), *(pta + 3))) break;
+			case 3: if (scandum_not_greater(cmp, *(pta + 1), *(pta + 2))) break;
+			case 2: if (scandum_not_greater(cmp, *(pta + 0), *(pta + 1))) break;
+			case 1: if (scandum_not_greater(cmp, *(pta - 1), *(pta + 0))) break;
 			case 0:
 				quad_reversal(pts, pta + nmemb % 8 - 1);
 
@@ -574,7 +579,7 @@ size_t quad_swap(Iterator array, size_t nmemb, Compare cmp)
 
 	for (count = nmemb / 32 ; count-- ; pta += 32)
 	{
-		if (cmp(*(pta + 7), *(pta + 8)) == true && cmp(*(pta + 15), *(pta + 16)) == true && cmp(*(pta + 23), *(pta + 24)) == true)
+		if (scandum_not_greater(cmp, *(pta + 7), *(pta + 8)) && scandum_not_greater(cmp, *(pta + 15), *(pta + 16)) && scandum_not_greater(cmp, *(pta + 23), *(pta + 24)))
 		{
 			continue;
 		}
@@ -614,7 +619,7 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 
 	if (left + 1 >= right && right >= left && left >= 32)
 	{
-		if (cmp(*(ptl + 15), *ptr) == false && cmp(*ptl, *(ptr + 15)) == true && cmp(*tpl, *(tpr - 15)) == false && cmp(*(tpl - 15), *tpr) == true)
+		if (scandum_greater(cmp, *(ptl + 15), *ptr) && scandum_greater(cmp, *ptl, *(ptr + 15)) == true && scandum_not_greater(cmp, *tpl, *(tpr - 15)) && cmp(*(tpl - 15), *tpr))
 		{
 			parity_merge(dest, from, left, right, cmp);
 			return;
@@ -627,14 +632,14 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 	{
 		if (tpl - ptl > 8)
 		{
-			ptl8_ptr: if (cmp(*(ptl + 7), *ptr) == true)
+			ptl8_ptr: if (scandum_not_greater(cmp, *(ptl + 7), *ptr))
 			{
 				scandum_copy_range(T, ptd, ptl, 8); ptd += 8; ptl += 8;
 
 				if (tpl - ptl > 8) {goto ptl8_ptr;} continue;
 			}
 
-			tpl8_tpr: if (cmp(*(tpl - 7), *tpr) == false)
+			tpl8_tpr: if (scandum_greater(cmp, *(tpl - 7), *tpr))
 			{
 				tpd -= 7; tpl -= 7; scandum_copy_range(T, tpd--, tpl--, 8);
 
@@ -644,14 +649,14 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 
 		if (tpr - ptr > 8)
 		{
-			ptl_ptr8: if (cmp(*ptl, *(ptr + 7)) == false)
+			ptl_ptr8: if (scandum_greater(cmp, *ptl, *(ptr + 7)))
 			{
 				scandum_copy_range(T, ptd, ptr, 8); ptd += 8; ptr += 8;
 
 				if (tpr - ptr > 8) {goto ptl_ptr8;} continue;
 			}
 
-			tpl_tpr8: if (cmp(*tpl, *(tpr - 7)) == true)
+			tpl_tpr8: if (scandum_not_greater(cmp, *tpl, *(tpr - 7)))
 			{
 				tpd -= 7; tpr -= 7; scandum_copy_range(T, tpd--, tpr--, 8);
 
@@ -669,7 +674,7 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 		{
 			loop = 8; do
 			{
-				*ptd++ = cmp(*ptl, *ptr) == true ? *ptl++ : *ptr++;
+				*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
 				*tpd-- = cmp(*tpl, *tpr)  == false ? *tpl-- : *tpr--;
 			}
 			while (--loop);
@@ -688,7 +693,7 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 
 	while (ptl <= tpl && ptr <= tpr)
 	{
-		*ptd++ = cmp(*ptl, *ptr) == true ? *ptl++ : *ptr++;
+		*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
 	}
 	while (ptl <= tpl)
 	{
@@ -710,7 +715,7 @@ void quad_merge_block(Iterator array, T* swap, size_t block, Compare cmp)
 	pt2 = pt1 + block;
 	pt3 = pt2 + block;
 
-	switch ((cmp(*(pt1 - 1), *pt1) == true) | (cmp(*(pt3 - 1), *pt3) == true) * 2)
+	switch ((scandum_not_greater(cmp, *(pt1 - 1), *pt1)) | (scandum_not_greater(cmp, *(pt3 - 1), *pt3)) * 2)
 	{
 		case 0:
 			cross_merge(swap, array, block, block, cmp);
@@ -725,7 +730,7 @@ void quad_merge_block(Iterator array, T* swap, size_t block, Compare cmp)
 			scandum_copy_range(T, swap + block_x_2, pt2, block_x_2);
 			break;
 		case 3:
-			if (cmp(*(pt2 - 1), *pt2) == true)
+			if (scandum_not_greater(cmp, *(pt2 - 1), *pt2))
 				return;
 			scandum_copy_range(T, swap, array, block_x_2 * 2);
 	}
@@ -778,7 +783,7 @@ void partial_forward_merge(Iterator array, T* swap, size_t swap_size, size_t nme
 	ptr = array + block;
 	tpr = array + nmemb - 1;
 
-	if (cmp(*(ptr - 1), *ptr) == true)
+	if (scandum_not_greater(cmp, *(ptr - 1), *ptr))
 	{
 		return;
 	}
@@ -790,13 +795,13 @@ void partial_forward_merge(Iterator array, T* swap, size_t swap_size, size_t nme
 
 	while (ptl < tpl - 1 && ptr < tpr - 1)
 	{
-		ptr2: if (cmp(*ptl, *(ptr + 1)) == false)
+		ptr2: if (scandum_greater(cmp, *ptl, *(ptr + 1)))
 		{
 			*array++ = *ptr++; *array++ = *ptr++;
 
 			if (ptr < tpr - 1) {goto ptr2;} break;
 		}
-		if (cmp(*(ptl + 1), *ptr) == true)
+		if (scandum_not_greater(cmp, *(ptl + 1), *ptr))
 		{
 			*array++ = *ptl++; *array++ = *ptl++;
 
@@ -805,14 +810,14 @@ void partial_forward_merge(Iterator array, T* swap, size_t swap_size, size_t nme
 
 		goto cross_swap;
 
-		ptl2: if (cmp(*(ptl + 1), *ptr) == true)
+		ptl2: if (scandum_not_greater(cmp, *(ptl + 1), *ptr))
 		{
 			*array++ = *ptl++; *array++ = *ptl++;
 
 			if (ptl < tpl - 1) {goto ptl2;} break;
 		}
 
-		if (cmp(*ptl, *(ptr + 1)) == false)
+		if (scandum_greater(cmp, *ptl, *(ptr + 1)))
 		{
 			*array++ = *ptr++; *array++ = *ptr++;
 
@@ -821,13 +826,13 @@ void partial_forward_merge(Iterator array, T* swap, size_t swap_size, size_t nme
 
 		cross_swap:
 
-		x = cmp(*ptl, *ptr) == true; array[x] = *ptr; ptr += 1; array[!x] = *ptl; ptl += 1; array += 2;
+		x = scandum_not_greater(cmp, *ptl, *ptr); array[x] = *ptr; ptr += 1; array[!x] = *ptl; ptl += 1; array += 2;
 		scandum_head_branchless_merge(array, x, ptl, ptr, cmp);
 	}
 
 	while (ptl <= tpl && ptr <= tpr)
 	{
-		*array++ = cmp(*ptl, *ptr) == true ? *ptl++ : *ptr++;
+		*array++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
 	}
 
 	while (ptl <= tpl)
@@ -851,7 +856,7 @@ void partial_backward_merge(Iterator array, T* swap, size_t swap_size, size_t nm
 	tpl = array + block - 1;
 	tpa = array + nmemb - 1;
 
-	if (cmp(*tpl, *(tpl + 1)) == true)
+	if (scandum_not_greater(cmp, *tpl, *(tpl + 1)))
 	{
 		return;
 	}
@@ -873,14 +878,14 @@ void partial_backward_merge(Iterator array, T* swap, size_t swap_size, size_t nm
 
 	while (tpl > array + 16 && tpr > swap + 16)
 	{
-		tpl_tpr16: if (cmp(*tpl, *(tpr - 15)) == true)
+		tpl_tpr16: if (scandum_not_greater(cmp, *tpl, *(tpr - 15)))
 		{
 			loop = 16; do *tpa-- = *tpr--; while (--loop);
 
 			if (tpr > swap + 16) {goto tpl_tpr16;} break;
 		}
 
-		tpl16_tpr: if (cmp(*(tpl - 15), *tpr) == false)
+		tpl16_tpr: if (scandum_greater(cmp, *(tpl - 15), *tpr))
 		{
 			loop = 16; do *tpa-- = *tpl--; while (--loop);
 			
@@ -888,17 +893,17 @@ void partial_backward_merge(Iterator array, T* swap, size_t swap_size, size_t nm
 		}
 		loop = 8; do
 		{
-			if (cmp(*tpl, *(tpr - 1)) == true)
+			if (scandum_not_greater(cmp, *tpl, *(tpr - 1)))
 			{
 				*tpa-- = *tpr--; *tpa-- = *tpr--;
 			}
-			else if (cmp(*(tpl - 1), *tpr) == false)
+			else if (scandum_greater(cmp, *(tpl - 1), *tpr))
 			{
 				*tpa-- = *tpl--; *tpa-- = *tpl--;
 			}
 			else
 			{
-				x = cmp(*tpl, *tpr) == true; tpa--; tpa[x] = *tpr; tpr -= 1; tpa[!x] = *tpl; tpl -= 1; tpa--;
+				x = scandum_not_greater(cmp, *tpl, *tpr); tpa--; tpa[x] = *tpr; tpr -= 1; tpa[!x] = *tpl; tpl -= 1; tpa--;
 				scandum_tail_branchless_merge(tpa, x, tpl, tpr, cmp);
 			}
 		}
@@ -907,14 +912,14 @@ void partial_backward_merge(Iterator array, T* swap, size_t swap_size, size_t nm
 
 	while (tpr > swap + 1 && tpl > array + 1)
 	{
-		tpr2: if (cmp(*tpl, *(tpr - 1)) == true)
+		tpr2: if (scandum_not_greater(cmp, *tpl, *(tpr - 1)))
 		{
 			*tpa-- = *tpr--; *tpa-- = *tpr--;
 			
 			if (tpr > swap + 1) {goto tpr2;} break;
 		}
 
-		if (cmp(*(tpl - 1), *tpr) == false)
+		if (scandum_greater(cmp, *(tpl - 1), *tpr))
 		{
 			*tpa-- = *tpl--; *tpa-- = *tpl--;
 
@@ -922,14 +927,14 @@ void partial_backward_merge(Iterator array, T* swap, size_t swap_size, size_t nm
 		}
 		goto cross_swap;
 
-	tpl2: if (cmp(*(tpl - 1), *tpr) == false)
+	tpl2: if (scandum_greater(cmp, *(tpl - 1), *tpr))
 		{
 			*tpa-- = *tpl--; *tpa-- = *tpl--;
 
 			if (tpl > array + 1) {goto tpl2;} break;
 		}
 
-		if (cmp(*tpl, *(tpr - 1)) == true)
+		if (scandum_not_greater(cmp, *tpl, *(tpr - 1)))
 		{
 			*tpa-- = *tpr--; *tpa-- = *tpr--;
 			
@@ -937,13 +942,13 @@ void partial_backward_merge(Iterator array, T* swap, size_t swap_size, size_t nm
 		}
 		cross_swap:
 
-		x = cmp(*tpl, *tpr) == true; tpa--; tpa[x] = *tpr; tpr -= 1; tpa[!x] = *tpl; tpl -= 1; tpa--;
+		x = scandum_not_greater(cmp, *tpl, *tpr); tpa--; tpa[x] = *tpr; tpr -= 1; tpa[!x] = *tpl; tpl -= 1; tpa--;
 		scandum_tail_branchless_merge(tpa, x, tpl, tpr, cmp);
 	}
 
 	while (tpr >= swap && tpl >= array)
 	{
-		*tpa-- = cmp(*tpl, *tpr) == false ? *tpl-- : *tpr--;
+		*tpa-- = scandum_greater(cmp, *tpl, *tpr) ? *tpl-- : *tpr--;
 	}
 
 	while (tpr >= swap)
@@ -1105,14 +1110,14 @@ size_t monobound_binary_first(Iterator array, Iterator value, size_t top, Compar
 	{
 		mid = top / 2;
 
-		if (cmp(*value, *(end - mid)) == true)
+		if (scandum_not_greater(cmp, *value, *(end - mid)))
 		{
 			end -= mid;
 		}
 		top -= mid;
 	}
 
-	if (cmp(*value, *(end - 1)) == true)
+	if (scandum_not_greater(cmp, *value, *(end - 1)))
 	{
 		end--;
 	}
@@ -1124,7 +1129,7 @@ void rotate_merge_block(Iterator array, T* swap, size_t swap_size, size_t lblock
 {
 	size_t left, rblock, unbalanced;
 
-	if (cmp(*(array + lblock - 1), *(array + lblock)) == true)
+	if (scandum_not_greater(cmp, *(array + lblock - 1), *(array + lblock)))
 	{
 		return;
 	}
@@ -1288,7 +1293,8 @@ void quadsort(Iterator begin, Iterator end)
 
 } // namespace scandum
 
-
+#undef scandum_greater
+#undef scandum_not_greater
 #undef scandum_head_branchless_merge
 #undef scandum_tail_branchless_merge
 #undef scandum_parity_merge_two

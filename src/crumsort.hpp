@@ -24,6 +24,11 @@
 #define CRUM_AUX  512
 #define CRUM_OUT   96
 
+// comparison functions
+
+#define scandum_greater(less, lhs, rhs) less(rhs, lhs)
+#define scandum_not_greater(less, lhs, rhs) (less(lhs, rhs) || !less(rhs, lhs))
+
 namespace scandum {
 
 namespace detail {
@@ -59,10 +64,10 @@ void crum_analyze(Iterator array, T* swap, size_t swap_size, size_t nmemb, Compa
 	{
 		for (asum = bsum = csum = dsum = 0, loop = 32 ; loop ; loop--)
 		{
-			asum += cmp(*pta, *(pta + 1)) == false; pta++;
-			bsum += cmp(*ptb, *(ptb + 1)) == false; ptb++;
-			csum += cmp(*ptc, *(ptc + 1)) == false; ptc++;
-			dsum += cmp(*ptd, *(ptd + 1)) == false; ptd++;
+			asum += scandum_greater(cmp, *pta, *(pta + 1)); pta++;
+			bsum += scandum_greater(cmp, *ptb, *(ptb + 1)); ptb++;
+			csum += scandum_greater(cmp, *ptc, *(ptc + 1)); ptc++;
+			dsum += scandum_greater(cmp, *ptd, *(ptd + 1)); ptd++;
 		}
 		abalance += asum; astreaks += asum = (asum == 0) | (asum == 32);
 		bbalance += bsum; bstreaks += bsum = (bsum == 0) | (bsum == 32);
@@ -81,21 +86,21 @@ void crum_analyze(Iterator array, T* swap, size_t swap_size, size_t nmemb, Compa
 
 	for ( ; cnt > 7 ; cnt -= 4)
 	{
-		abalance += cmp(*pta, *(pta + 1)) == false; pta++;
-		bbalance += cmp(*ptb, *(ptb + 1)) == false; ptb++;
-		cbalance += cmp(*ptc, *(ptc + 1)) == false; ptc++;
-		dbalance += cmp(*ptd, *(ptd + 1)) == false; ptd++;
+		abalance += scandum_greater(cmp, *pta, *(pta + 1)); pta++;
+		bbalance += scandum_greater(cmp, *ptb, *(ptb + 1)); ptb++;
+		cbalance += scandum_greater(cmp, *ptc, *(ptc + 1)); ptc++;
+		dbalance += scandum_greater(cmp, *ptd, *(ptd + 1)); ptd++;
 	}
 
-	if (quad1 < quad2) {bbalance += cmp(*ptb, *(ptb + 1)) == false; ptb++;}
-	if (quad1 < quad3) {cbalance += cmp(*ptc, *(ptc + 1)) == false; ptc++;}
-	if (quad1 < quad4) {dbalance += cmp(*ptd, *(ptd + 1)) == false; ptd++;}
+	if (quad1 < quad2) {bbalance += scandum_greater(cmp, *ptb, *(ptb + 1)); ptb++;}
+	if (quad1 < quad3) {cbalance += scandum_greater(cmp, *ptc, *(ptc + 1)); ptc++;}
+	if (quad1 < quad4) {dbalance += scandum_greater(cmp, *ptd, *(ptd + 1)); ptd++;}
 
 	cnt = abalance + bbalance + cbalance + dbalance;
 
 	if (cnt == 0)
 	{
-		if (cmp(*pta, *(pta + 1)) == true && cmp(*ptb, *(ptb + 1)) == true && cmp(*ptc, *(ptc + 1)) == true)
+		if (scandum_not_greater(cmp, *pta, *(pta + 1)) && scandum_not_greater(cmp, *ptb, *(ptb + 1)) && scandum_not_greater(cmp, *ptc, *(ptc + 1)))
 		{
 			return;
 		}
@@ -108,9 +113,9 @@ void crum_analyze(Iterator array, T* swap, size_t swap_size, size_t nmemb, Compa
 
 	if (asum | bsum | csum | dsum)
 	{
-		unsigned char span1 = (asum && bsum) * (cmp(*pta, *(pta + 1)) == false);
-		unsigned char span2 = (bsum && csum) * (cmp(*ptb, *(ptb + 1)) == false);
-		unsigned char span3 = (csum && dsum) * (cmp(*ptc, *(ptc + 1)) == false);
+		unsigned char span1 = (asum && bsum) * (scandum_greater(cmp, *pta, *(pta + 1)));
+		unsigned char span2 = (bsum && csum) * (scandum_greater(cmp, *ptb, *(ptb + 1)));
+		unsigned char span3 = (csum && dsum) * (scandum_greater(cmp, *ptc, *(ptc + 1)));
 
 		switch (span1 | span2 * 2 | span3 * 4)
 		{
@@ -221,11 +226,11 @@ void crum_analyze(Iterator array, T* swap, size_t swap_size, size_t nmemb, Compa
 			break;
 	}
 
-	if (cmp(*pta, *(pta + 1)) == true)
+	if (scandum_not_greater(cmp, *pta, *(pta + 1)))
 	{
-		if (cmp(*ptc, *(ptc + 1)) == true)
+		if (scandum_not_greater(cmp, *ptc, *(ptc + 1)))
 		{
-			if (cmp(*ptb, *(ptb + 1)) == true)
+			if (scandum_not_greater(cmp, *ptb, *(ptb + 1)))
 			{
 				return;
 			}
@@ -239,7 +244,7 @@ void crum_analyze(Iterator array, T* swap, size_t swap_size, size_t nmemb, Compa
 	{
 		rotate_merge_block(array, swap, swap_size, quad1, quad2, cmp);
 
-		if (cmp(*ptc, *(ptc + 1)) == false)
+		if (scandum_greater(cmp, *ptc, *(ptc + 1)))
 		{
 			rotate_merge_block(array + half1, swap, swap_size, quad3, quad4, cmp);
 		}
@@ -254,9 +259,9 @@ Iterator crum_binary_median(Iterator pta, Iterator ptb, size_t len, Compare cmp)
 {
 	while (len /= 2)
 	{
-		if (cmp(*(pta + len), *(ptb + len)) == true) pta += len; else ptb += len;
+		if (scandum_not_greater(cmp, *(pta + len), *(ptb + len))) pta += len; else ptb += len;
 	}
-	return cmp(*pta, *ptb) == false ? pta : ptb;
+	return scandum_greater(cmp, *pta, *ptb) ? pta : ptb;
 }
 
 template<typename T, typename Iterator, typename Compare>
@@ -284,7 +289,7 @@ Iterator crum_median_of_cbrt(Iterator array, T* swap, size_t swap_size, size_t n
 	quadsort_swap(piv, swap, swap_size, cbrt, cmp);
 	quadsort_swap(piv + cbrt, swap, swap_size, cbrt, cmp);
 
-	*generic = (cmp(*(piv + cbrt * 2 - 1), *piv) == true) & (cmp(*(piv + cbrt - 1), *piv) == true);
+	*generic = (scandum_not_greater(cmp, *(piv + cbrt * 2 - 1), *piv)) & (scandum_not_greater(cmp, *(piv + cbrt - 1), *piv));
 
 	return crum_binary_median(piv, piv + cbrt, cbrt, cmp);
 }
@@ -295,9 +300,9 @@ size_t crum_median_of_three(Iterator array, size_t v0, size_t v1, size_t v2, Com
 	size_t v[3] = {v0, v1, v2};
 	char x, y, z;
 
-	x = cmp(*(array + v0), *(array + v1)) == false;
-	y = cmp(*(array + v0), *(array + v2)) == false;
-	z = cmp(*(array + v1), *(array + v2)) == false;
+	x = scandum_greater(cmp, *(array + v0), *(array + v1));
+	y = scandum_greater(cmp, *(array + v0), *(array + v2));
+	z = scandum_greater(cmp, *(array + v1), *(array + v2));
 
 	return v[(x == y) + (y ^ z)];
 }
@@ -339,7 +344,7 @@ size_t fulcrum_default_partition(Iterator array, T* swap, Iterator ptx, T* piv, 
 
 			for (i = 16 ; i ; i--)
 			{
-				val = cmp(*pta, *piv) == true; ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+				val = scandum_not_greater(cmp, *pta, *piv); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
 			}
 		}
 		if (pta - ptl - m >= 16)
@@ -348,7 +353,7 @@ size_t fulcrum_default_partition(Iterator array, T* swap, Iterator ptx, T* piv, 
 
 			for (i = 16 ; i ; i--)
 			{
-				val = cmp(*tpa, *piv) == true; ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
+				val = scandum_not_greater(cmp, *tpa, *piv); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
 			}
 		}
 	}
@@ -357,24 +362,24 @@ size_t fulcrum_default_partition(Iterator array, T* swap, Iterator ptx, T* piv, 
 	{
 		for (cnt = nmemb % 16 ; cnt ; cnt--)
 		{
-			val = cmp(*pta, *piv) == true; ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+			val = scandum_not_greater(cmp, *pta, *piv); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
 		}
 	}
 	else
 	{
 		for (cnt = nmemb % 16 ; cnt ; cnt--)
 		{
-			val = cmp(*tpa, *piv) == true; ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
+			val = scandum_not_greater(cmp, *tpa, *piv); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
 		}
 	}
 	T* pta2 = swap;
 
 	for (cnt = 16 ; cnt ; cnt--)
 	{
-		val = cmp(*pta2, *piv) == true; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
-		val = cmp(*pta2, *piv) == true; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
-		val = cmp(*pta2, *piv) == true; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
-		val = cmp(*pta2, *piv) == true; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_not_greater(cmp, *pta2, *piv); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_not_greater(cmp, *pta2, *piv); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_not_greater(cmp, *pta2, *piv); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_not_greater(cmp, *pta2, *piv); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
 	}
 	return m;
 }
@@ -406,7 +411,7 @@ size_t fulcrum_reverse_partition(Iterator array, T* swap, Iterator ptx, T* piv, 
 
 			for (i = 16 ; i ; i--)
 			{
-				val = cmp(*piv, *pta) == false; ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+				val = scandum_greater(cmp, *piv, *pta); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
 			}
 		}
 		if (pta - ptl - m >= 16)
@@ -415,7 +420,7 @@ size_t fulcrum_reverse_partition(Iterator array, T* swap, Iterator ptx, T* piv, 
 
 			for (i = 16 ; i ; i--)
 			{
-				val = cmp(*piv, *tpa) == false; ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
+				val = scandum_greater(cmp, *piv, *tpa); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
 			}
 		}
 	}
@@ -424,24 +429,24 @@ size_t fulcrum_reverse_partition(Iterator array, T* swap, Iterator ptx, T* piv, 
 	{
 		for (cnt = nmemb % 16 ; cnt ; cnt--)
 		{
-			val = cmp(*piv, *pta) == false; ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+			val = scandum_greater(cmp, *piv, *pta); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
 		}
 	}
 	else
 	{
 		for (cnt = nmemb % 16 ; cnt ; cnt--)
 		{
-			val = cmp(*piv, *tpa) == false; ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
+			val = scandum_greater(cmp, *piv, *tpa); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
 		}
 	}
 	T* pta2 = swap;
 
 	for (cnt = 16 ; cnt ; cnt--)
 	{
-		val = cmp(*piv, *pta2) == false; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
-		val = cmp(*piv, *pta2) == false; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
-		val = cmp(*piv, *pta2) == false; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
-		val = cmp(*piv, *pta2) == false; ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_greater(cmp, *piv, *pta2); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_greater(cmp, *piv, *pta2); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_greater(cmp, *piv, *pta2); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_greater(cmp, *piv, *pta2); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
 	}
 	return m;
 }
@@ -468,7 +473,7 @@ void fulcrum_partition(Iterator array, T* swap, T* max, size_t swap_size, size_t
 		}
 		piv = *ptp;
 
-		if (max && cmp(*max, piv) == true)
+		if (max && scandum_not_greater(cmp, *max, piv))
 		{
 			a_size = fulcrum_reverse_partition(array, swap, array, &piv, swap_size, nmemb, cmp);
 			s_size = nmemb - a_size;
@@ -564,5 +569,8 @@ void crumsort(Iterator begin, Iterator end)
 }
 
 } // namespace scandum
+
+#undef scandum_greater
+#undef scandum_not_greater
 
 #endif

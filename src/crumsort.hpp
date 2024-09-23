@@ -25,10 +25,8 @@
 
 // comparison functions
 
-#define scandum_greater(less, lhs, rhs) less(get_elem<T>(rhs), get_elem<T>(lhs))
-#define scandum_not_greater(less, lhs, rhs) \
-	(less(get_elem<T>(lhs), get_elem<T>(rhs)) || \
-	!less(get_elem<T>(rhs), get_elem<T>(lhs)))
+#define scandum_greater(less, lhs, rhs) less(rhs, lhs)
+#define scandum_not_greater(less, lhs, rhs) (less(lhs, rhs) || !less(rhs, lhs))
 
 namespace scandum {
 
@@ -65,10 +63,10 @@ void crum_analyze(Iterator array, swap_space<T>& swap, size_t nmemb, Compare cmp
 	{
 		for (asum = bsum = csum = dsum = 0, loop = 32 ; loop ; loop--)
 		{
-			asum += scandum_greater(cmp, pta, pta + 1); pta++;
-			bsum += scandum_greater(cmp, ptb, ptb + 1); ptb++;
-			csum += scandum_greater(cmp, ptc, ptc + 1); ptc++;
-			dsum += scandum_greater(cmp, ptd, ptd + 1); ptd++;
+			asum += scandum_greater(cmp, *pta, *(pta + 1)); pta++;
+			bsum += scandum_greater(cmp, *ptb, *(ptb + 1)); ptb++;
+			csum += scandum_greater(cmp, *ptc, *(ptc + 1)); ptc++;
+			dsum += scandum_greater(cmp, *ptd, *(ptd + 1)); ptd++;
 		}
 		abalance += asum; astreaks += asum = (asum == 0) | (asum == 32);
 		bbalance += bsum; bstreaks += bsum = (bsum == 0) | (bsum == 32);
@@ -87,21 +85,21 @@ void crum_analyze(Iterator array, swap_space<T>& swap, size_t nmemb, Compare cmp
 
 	for ( ; cnt > 7 ; cnt -= 4)
 	{
-		abalance += scandum_greater(cmp, pta, pta + 1); pta++;
-		bbalance += scandum_greater(cmp, ptb, ptb + 1); ptb++;
-		cbalance += scandum_greater(cmp, ptc, ptc + 1); ptc++;
-		dbalance += scandum_greater(cmp, ptd, ptd + 1); ptd++;
+		abalance += scandum_greater(cmp, *pta, *(pta + 1)); pta++;
+		bbalance += scandum_greater(cmp, *ptb, *(ptb + 1)); ptb++;
+		cbalance += scandum_greater(cmp, *ptc, *(ptc + 1)); ptc++;
+		dbalance += scandum_greater(cmp, *ptd, *(ptd + 1)); ptd++;
 	}
 
-	if (quad1 < quad2) {bbalance += scandum_greater(cmp, ptb, ptb + 1); ptb++;}
-	if (quad1 < quad3) {cbalance += scandum_greater(cmp, ptc, ptc + 1); ptc++;}
-	if (quad1 < quad4) {dbalance += scandum_greater(cmp, ptd, ptd + 1); ptd++;}
+	if (quad1 < quad2) { bbalance += scandum_greater(cmp, *ptb, *(ptb + 1)); ptb++; }
+	if (quad1 < quad3) { cbalance += scandum_greater(cmp, *ptc, *(ptc + 1)); ptc++; }
+	if (quad1 < quad4) { dbalance += scandum_greater(cmp, *ptd, *(ptd + 1)); ptd++; }
 
 	cnt = abalance + bbalance + cbalance + dbalance;
 
 	if (cnt == 0)
 	{
-		if (scandum_not_greater(cmp, pta, pta + 1) && scandum_not_greater(cmp, ptb, ptb + 1) && scandum_not_greater(cmp, ptc, ptc + 1))
+		if (scandum_not_greater(cmp, *pta, *(pta + 1)) && scandum_not_greater(cmp, *ptb, *(ptb + 1)) && scandum_not_greater(cmp, *ptc, *(ptc + 1)))
 		{
 			return;
 		}
@@ -114,9 +112,9 @@ void crum_analyze(Iterator array, swap_space<T>& swap, size_t nmemb, Compare cmp
 
 	if (asum | bsum | csum | dsum)
 	{
-		unsigned char span1 = (asum && bsum) * (scandum_greater(cmp, pta, pta + 1));
-		unsigned char span2 = (bsum && csum) * (scandum_greater(cmp, ptb, ptb + 1));
-		unsigned char span3 = (csum && dsum) * (scandum_greater(cmp, ptc, ptc + 1));
+		unsigned char span1 = (asum && bsum) * (scandum_greater(cmp, *pta, *(pta + 1)));
+		unsigned char span2 = (bsum && csum) * (scandum_greater(cmp, *ptb, *(ptb + 1)));
+		unsigned char span3 = (csum && dsum) * (scandum_greater(cmp, *ptc, *(ptc + 1)));
 
 		switch (span1 | span2 * 2 | span3 * 4)
 		{
@@ -131,10 +129,10 @@ void crum_analyze(Iterator array, swap_space<T>& swap, size_t nmemb, Compare cmp
 			case 7: quad_reversal<T>(array, ptd); return;
 		}
 
-		if (asum && abalance) {quad_reversal<T>(array,   pta); abalance = 0;}
-		if (bsum && bbalance) {quad_reversal<T>(pta + 1, ptb); bbalance = 0;}
-		if (csum && cbalance) {quad_reversal<T>(ptb + 1, ptc); cbalance = 0;}
-		if (dsum && dbalance) {quad_reversal<T>(ptc + 1, ptd); dbalance = 0;}
+		if (asum && abalance) { quad_reversal<T>(array, pta); abalance = 0; }
+		if (bsum && bbalance) { quad_reversal<T>(pta + 1, ptb); bbalance = 0; }
+		if (csum && cbalance) { quad_reversal<T>(ptb + 1, ptc); cbalance = 0; }
+		if (dsum && dbalance) { quad_reversal<T>(ptc + 1, ptd); dbalance = 0; }
 	}
 
 #ifdef cmp
@@ -158,40 +156,40 @@ void crum_analyze(Iterator array, swap_space<T>& swap, size_t nmemb, Compare cmp
 	switch (asum + bsum * 2 + csum * 4 + dsum * 8)
 	{
 		case 0:
-			fulcrum_partition(array, swap, (T*)nullptr, nmemb, cmp);
+			fulcrum_partition<T>(array, swap, (T*)nullptr, nmemb, cmp);
 			return;
 		case 1:
-			if (abalance) quadsort_swap(array, swap, quad1, cmp);
-			fulcrum_partition(pta + 1, swap, (T*)nullptr, quad2 + half2, cmp);
+			if (abalance) quadsort_swap<T>(array, swap, quad1, cmp);
+			fulcrum_partition<T>(pta + 1, swap, (T*)nullptr, quad2 + half2, cmp);
 			break;
 		case 2:
-			fulcrum_partition(array, swap, (T*)nullptr, quad1, cmp);
-			if (bbalance) quadsort_swap(pta + 1, swap, quad2, cmp);
-			fulcrum_partition(ptb + 1, swap, (T*)nullptr, half2, cmp);
+			fulcrum_partition<T>(array, swap, (T*)nullptr, quad1, cmp);
+			if (bbalance) quadsort_swap<T>(pta + 1, swap, quad2, cmp);
+			fulcrum_partition<T>(ptb + 1, swap, (T*)nullptr, half2, cmp);
 			break;
 		case 3:
-			if (abalance) quadsort_swap(array, swap, quad1, cmp);
-			if (bbalance) quadsort_swap(pta + 1, swap, quad2, cmp);
-			fulcrum_partition(ptb + 1, swap, (T*)nullptr, half2, cmp);
+			if (abalance) quadsort_swap<T>(array, swap, quad1, cmp);
+			if (bbalance) quadsort_swap<T>(pta + 1, swap, quad2, cmp);
+			fulcrum_partition<T>(ptb + 1, swap, (T*)nullptr, half2, cmp);
 			break;
 		case 4:
-			fulcrum_partition(array, swap, (T*)nullptr, half1, cmp);
-			if (cbalance) quadsort_swap(ptb + 1, swap, quad3, cmp);
-			fulcrum_partition(ptc + 1, swap, (T*)nullptr, quad4, cmp);
+			fulcrum_partition<T>(array, swap, (T*)nullptr, half1, cmp);
+			if (cbalance) quadsort_swap<T>(ptb + 1, swap, quad3, cmp);
+			fulcrum_partition<T>(ptc + 1, swap, (T*)nullptr, quad4, cmp);
 			break;
 		case 8:
-			fulcrum_partition(array, swap, (T*)nullptr, half1 + quad3, cmp);
-			if (dbalance) quadsort_swap(ptc + 1, swap, quad4, cmp);
+			fulcrum_partition<T>(array, swap, (T*)nullptr, half1 + quad3, cmp);
+			if (dbalance) quadsort_swap<T>(ptc + 1, swap, quad4, cmp);
 			break;
 		case 9:
-			if (abalance) quadsort_swap(array, swap, quad1, cmp);
-			fulcrum_partition(pta + 1, swap, (T*)nullptr, quad2 + quad3, cmp);
-			if (dbalance) quadsort_swap(ptc + 1, swap, quad4, cmp);
+			if (abalance) quadsort_swap<T>(array, swap, quad1, cmp);
+			fulcrum_partition<T>(pta + 1, swap, (T*)nullptr, quad2 + quad3, cmp);
+			if (dbalance) quadsort_swap<T>(ptc + 1, swap, quad4, cmp);
 			break;
 		case 12:
-			fulcrum_partition(array, swap, (T*)nullptr, half1, cmp);
-			if (cbalance) quadsort_swap(ptb + 1, swap, quad3, cmp);
-			if (dbalance) quadsort_swap(ptc + 1, swap, quad4, cmp);
+			fulcrum_partition<T>(array, swap, (T*)nullptr, half1, cmp);
+			if (cbalance) quadsort_swap<T>(ptb + 1, swap, quad3, cmp);
+			if (dbalance) quadsort_swap<T>(ptc + 1, swap, quad4, cmp);
 			break;
 		case 5:
 		case 6:
@@ -206,67 +204,67 @@ void crum_analyze(Iterator array, swap_space<T>& swap, size_t nmemb, Compare cmp
 #endif
 			if (asum)
 			{
-				if (abalance) quadsort_swap(array, swap, quad1, cmp);
+				if (abalance) quadsort_swap<T>(array, swap, quad1, cmp);
 			}
-			else fulcrum_partition(array, swap, (T*)nullptr, quad1, cmp);
+			else fulcrum_partition<T>(array, swap, (T*)nullptr, quad1, cmp);
 			if (bsum)
 			{
-				if (bbalance) quadsort_swap(pta + 1, swap, quad2, cmp);
+				if (bbalance) quadsort_swap<T>(pta + 1, swap, quad2, cmp);
 			}
-			else fulcrum_partition(pta + 1, swap, (T*)nullptr, quad2, cmp);
+			else fulcrum_partition<T>(pta + 1, swap, (T*)nullptr, quad2, cmp);
 			if (csum)
 			{
-				if (cbalance) quadsort_swap(ptb + 1, swap, quad3, cmp);
+				if (cbalance) quadsort_swap<T>(ptb + 1, swap, quad3, cmp);
 			}
-			else fulcrum_partition(ptb + 1, swap, (T*)nullptr, quad3, cmp);
+			else fulcrum_partition<T>(ptb + 1, swap, (T*)nullptr, quad3, cmp);
 			if (dsum)
 			{
-				if (dbalance) quadsort_swap(ptc + 1, swap, quad4, cmp);
+				if (dbalance) quadsort_swap<T>(ptc + 1, swap, quad4, cmp);
 			}
-			else fulcrum_partition(ptc + 1, swap, (T*)nullptr, quad4, cmp);
+			else fulcrum_partition<T>(ptc + 1, swap, (T*)nullptr, quad4, cmp);
 			break;
 	}
 
-	if (scandum_not_greater(cmp, pta, pta + 1))
+	if (scandum_not_greater(cmp, *pta, *(pta + 1)))
 	{
-		if (scandum_not_greater(cmp, ptc, ptc + 1))
+		if (scandum_not_greater(cmp, *ptc, *(ptc + 1)))
 		{
-			if (scandum_not_greater(cmp, ptb, ptb + 1))
+			if (scandum_not_greater(cmp, *ptb, *(ptb + 1)))
 			{
 				return;
 			}
 		}
 		else
 		{
-			rotate_merge_block(array + half1, swap, quad3, quad4, cmp);
+			rotate_merge_block<T>(array + half1, swap, quad3, quad4, cmp);
 		}
 	}
 	else
 	{
-		rotate_merge_block(array, swap, quad1, quad2, cmp);
+		rotate_merge_block<T>(array, swap, quad1, quad2, cmp);
 
-		if (scandum_greater(cmp, ptc, ptc + 1))
+		if (scandum_greater(cmp, *ptc, *(ptc + 1)))
 		{
-			rotate_merge_block(array + half1, swap, quad3, quad4, cmp);
+			rotate_merge_block<T>(array + half1, swap, quad3, quad4, cmp);
 		}
 	}
-	rotate_merge_block(array, swap, half1, half2, cmp);
+	rotate_merge_block<T>(array, swap, half1, half2, cmp);
 }
 
 // The next 4 functions are used for pivot selection
 
-template<typename T, typename Iterator, typename Compare>
+template<typename Iterator, typename Compare>
 Iterator crum_binary_median(Iterator pta, Iterator ptb, size_t len, Compare cmp)
 {
 	while (len /= 2)
 	{
-		if (scandum_not_greater(cmp, pta + len, ptb + len)) pta += len; else ptb += len;
+		if (scandum_not_greater(cmp, *(pta + len), *(ptb + len))) pta += len; else ptb += len;
 	}
-	return scandum_greater(cmp, pta, ptb) ? pta : ptb;
+	return scandum_greater(cmp, *pta, *ptb) ? pta : ptb;
 }
 
 template<typename T, typename Iterator, typename Compare>
-Iterator crum_median_of_cbrt(Iterator array, swap_space<T>& swap, size_t nmemb, int *generic, Compare cmp)
+Iterator crum_median_of_cbrt(Iterator array, swap_space<T>& swap, size_t nmemb, int* generic, Compare cmp)
 {
 	Iterator pta, piv;
 	size_t cnt, cbrt, div;
@@ -275,49 +273,49 @@ Iterator crum_median_of_cbrt(Iterator array, swap_space<T>& swap, size_t nmemb, 
 
 	div = nmemb / cbrt;
 
-	pta = array + nmemb - 1 - (size_t) &div / 64 % div;
+	pta = array + nmemb - 1 - (size_t)&div / 64 % div;
 	piv = array + cbrt;
 
 	for (cnt = cbrt ; cnt ; cnt--)
 	{
-		swap.emplace(0, *--piv); *piv = *pta; *pta = get_elem<T>(swap.begin());
+		*swap.begin() = *--piv; *piv = *pta; *pta = *swap.begin();
 
 		pta -= div;
 	}
 
 	cbrt /= 2;
 
-	quadsort_swap(piv, swap, cbrt, cmp);
-	quadsort_swap(piv + cbrt, swap, cbrt, cmp);
+	quadsort_swap<T>(piv, swap, cbrt, cmp);
+	quadsort_swap<T>(piv + cbrt, swap, cbrt, cmp);
 
-	*generic = (scandum_not_greater(cmp, piv + cbrt * 2 - 1, piv)) & (scandum_not_greater(cmp, piv + cbrt - 1, piv));
+	*generic = (scandum_not_greater(cmp, *(piv + cbrt * 2 - 1), *piv)) & (scandum_not_greater(cmp, *(piv + cbrt - 1), *piv));
 
-	return crum_binary_median<T>(piv, piv + cbrt, cbrt, cmp);
+	return crum_binary_median(piv, piv + cbrt, cbrt, cmp);
 }
 
-template<typename T, typename Iterator, typename Compare>
+template<typename Iterator, typename Compare>
 size_t crum_median_of_three(Iterator array, size_t v0, size_t v1, size_t v2, Compare cmp)
 {
-	size_t v[3] = {v0, v1, v2};
+	size_t v[3] = { v0, v1, v2 };
 	char x, y, z;
 
-	x = scandum_greater(cmp, array + v0, array + v1);
-	y = scandum_greater(cmp, array + v0, array + v2);
-	z = scandum_greater(cmp, array + v1, array + v2);
+	x = scandum_greater(cmp, *(array + v0), *(array + v1));
+	y = scandum_greater(cmp, *(array + v0), *(array + v2));
+	z = scandum_greater(cmp, *(array + v1), *(array + v2));
 
 	return v[(x == y) + (y ^ z)];
 }
 
-template<typename T, typename Iterator, typename Compare>
+template<typename Iterator, typename Compare>
 Iterator crum_median_of_nine(Iterator array, size_t nmemb, Compare cmp)
 {
 	size_t x, y, z, div = nmemb / 16;
 
-	x = crum_median_of_three<T>(array, div * 2, div * 1, div * 4, cmp);
-	y = crum_median_of_three<T>(array, div * 8, div * 6, div * 10, cmp);
-	z = crum_median_of_three<T>(array, div * 14, div * 12, div * 15, cmp);
+	x = crum_median_of_three(array, div * 2, div * 1, div * 4, cmp);
+	y = crum_median_of_three(array, div * 8, div * 6, div * 10, cmp);
+	z = crum_median_of_three(array, div * 14, div * 12, div * 15, cmp);
 
-	return array + crum_median_of_three<T>(array, x, y, z, cmp);
+	return array + crum_median_of_three(array, x, y, z, cmp);
 }
 
 template<typename T, typename Iterator, typename Compare>
@@ -345,7 +343,7 @@ size_t fulcrum_default_partition(Iterator array, swap_space<T>& swap, Iterator p
 
 			for (i = 16 ; i ; i--)
 			{
-				val = scandum_not_greater(cmp, pta, piv); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+				val = scandum_not_greater(cmp, *pta, *piv); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
 			}
 		}
 		if (pta - ptl - m >= 16)
@@ -354,7 +352,7 @@ size_t fulcrum_default_partition(Iterator array, swap_space<T>& swap, Iterator p
 
 			for (i = 16 ; i ; i--)
 			{
-				val = scandum_not_greater(cmp, tpa, piv); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
+				val = scandum_not_greater(cmp, *tpa, *piv); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
 			}
 		}
 	}
@@ -363,24 +361,24 @@ size_t fulcrum_default_partition(Iterator array, swap_space<T>& swap, Iterator p
 	{
 		for (cnt = nmemb % 16 ; cnt ; cnt--)
 		{
-			val = scandum_not_greater(cmp, pta, piv); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+			val = scandum_not_greater(cmp, *pta, *piv); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
 		}
 	}
 	else
 	{
 		for (cnt = nmemb % 16 ; cnt ; cnt--)
 		{
-			val = scandum_not_greater(cmp, tpa, piv); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
+			val = scandum_not_greater(cmp, *tpa, *piv); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
 		}
 	}
 	typename swap_space<T>::iterator pta2 = swap.begin();
 
 	for (cnt = 16 ; cnt ; cnt--)
 	{
-		val = scandum_not_greater(cmp, pta2, piv); ptl[m] = ptr[m] = get_elem<T>(pta2++); m += val; ptr--;
-		val = scandum_not_greater(cmp, pta2, piv); ptl[m] = ptr[m] = get_elem<T>(pta2++); m += val; ptr--;
-		val = scandum_not_greater(cmp, pta2, piv); ptl[m] = ptr[m] = get_elem<T>(pta2++); m += val; ptr--;
-		val = scandum_not_greater(cmp, pta2, piv); ptl[m] = ptr[m] = get_elem<T>(pta2++); m += val; ptr--;
+		val = scandum_not_greater(cmp, *pta2, *piv); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_not_greater(cmp, *pta2, *piv); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_not_greater(cmp, *pta2, *piv); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_not_greater(cmp, *pta2, *piv); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
 	}
 	return m;
 }
@@ -412,7 +410,7 @@ size_t fulcrum_reverse_partition(Iterator array, swap_space<T>& swap, Iterator p
 
 			for (i = 16 ; i ; i--)
 			{
-				val = scandum_greater(cmp, piv, pta); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+				val = scandum_greater(cmp, *piv, *pta); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
 			}
 		}
 		if (pta - ptl - m >= 16)
@@ -421,7 +419,7 @@ size_t fulcrum_reverse_partition(Iterator array, swap_space<T>& swap, Iterator p
 
 			for (i = 16 ; i ; i--)
 			{
-				val = scandum_greater(cmp, piv, tpa); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
+				val = scandum_greater(cmp, *piv, *tpa); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
 			}
 		}
 	}
@@ -430,24 +428,24 @@ size_t fulcrum_reverse_partition(Iterator array, swap_space<T>& swap, Iterator p
 	{
 		for (cnt = nmemb % 16 ; cnt ; cnt--)
 		{
-			val = scandum_greater(cmp, piv, pta); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+			val = scandum_greater(cmp, *piv, *pta); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
 		}
 	}
 	else
 	{
 		for (cnt = nmemb % 16 ; cnt ; cnt--)
 		{
-			val = scandum_greater(cmp, piv, tpa); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
+			val = scandum_greater(cmp, *piv, *tpa); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
 		}
 	}
 	typename swap_space<T>::iterator pta2 = swap.begin();
 
 	for (cnt = 16 ; cnt ; cnt--)
 	{
-		val = scandum_greater(cmp, piv, pta2); ptl[m] = ptr[m] = get_elem<T>(pta2++); m += val; ptr--;
-		val = scandum_greater(cmp, piv, pta2); ptl[m] = ptr[m] = get_elem<T>(pta2++); m += val; ptr--;
-		val = scandum_greater(cmp, piv, pta2); ptl[m] = ptr[m] = get_elem<T>(pta2++); m += val; ptr--;
-		val = scandum_greater(cmp, piv, pta2); ptl[m] = ptr[m] = get_elem<T>(pta2++); m += val; ptr--;
+		val = scandum_greater(cmp, *piv, *pta2); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_greater(cmp, *piv, *pta2); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_greater(cmp, *piv, *pta2); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_greater(cmp, *piv, *pta2); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
 	}
 	return m;
 }
@@ -457,26 +455,26 @@ void fulcrum_partition(Iterator array, swap_space<T>& swap, T* max, size_t nmemb
 {
 	size_t a_size, s_size;
 	Iterator ptp;
-	temp_type<T> piv;
+	temp_var<T> piv;
 	int generic = 0;
 
 	while (1)
 	{
 		if (nmemb <= 2048)
 		{
-			ptp = crum_median_of_nine<T>(array, nmemb, cmp);
+			ptp = crum_median_of_nine(array, nmemb, cmp);
 		}
 		else
 		{
-			ptp = crum_median_of_cbrt(array, swap, nmemb, &generic, cmp);
+			ptp = crum_median_of_cbrt<T>(array, swap, nmemb, &generic, cmp);
 
 			if (generic) break;
 		}
-		set_temp(piv, *ptp);
+		piv = *ptp;
 
-		if (max && scandum_not_greater(cmp, max, &get_temp(piv)))
+		if (max && scandum_not_greater(cmp, *max, piv))
 		{
-			a_size = fulcrum_reverse_partition(array, swap, array, &get_temp(piv), nmemb, cmp);
+			a_size = fulcrum_reverse_partition<T>(array, swap, array, &(T&)piv, nmemb, cmp);
 			s_size = nmemb - a_size;
 			nmemb = a_size;
 
@@ -487,18 +485,18 @@ void fulcrum_partition(Iterator array, swap_space<T>& swap, T* max, size_t nmemb
 		}
 		*ptp = array[--nmemb];
 
-		a_size = fulcrum_default_partition(array, swap, array, &get_temp(piv), nmemb, cmp);
+		a_size = fulcrum_default_partition<T>(array, swap, array, &(T&)piv, nmemb, cmp);
 		s_size = nmemb - a_size;
 
-		ptp = array + a_size; array[nmemb] = *ptp; *ptp = get_temp(piv);
+		ptp = array + a_size; array[nmemb] = *ptp; *ptp = piv;
 
 		if (a_size <= s_size / 32 || s_size <= CRUM_OUT)
 		{
-			quadsort_swap(ptp + 1, swap, s_size, cmp);
+			quadsort_swap<T>(ptp + 1, swap, s_size, cmp);
 		}
 		else
 		{
-			fulcrum_partition(ptp + 1, swap, max, s_size, cmp);
+			fulcrum_partition<T>(ptp + 1, swap, max, s_size, cmp);
 		}
 		nmemb = a_size;
 
@@ -506,7 +504,7 @@ void fulcrum_partition(Iterator array, swap_space<T>& swap, T* max, size_t nmemb
 		{
 			if (a_size <= CRUM_OUT) break;
 
-			a_size = fulcrum_reverse_partition(array, swap, array, &get_temp(piv), nmemb, cmp);
+			a_size = fulcrum_reverse_partition<T>(array, swap, array, &(T&)piv, nmemb, cmp);
 			s_size = nmemb - a_size;
 			nmemb = a_size;
 
@@ -517,7 +515,7 @@ void fulcrum_partition(Iterator array, swap_space<T>& swap, T* max, size_t nmemb
 		}
 		max = &*ptp;
 	}
-	quadsort_swap(array, swap, nmemb, cmp);
+	quadsort_swap<T>(array, swap, nmemb, cmp);
 }
 
 template<typename T, typename Iterator, typename Compare>
@@ -525,11 +523,11 @@ void crumsort_swap(Iterator array, swap_space<T>& swap, size_t nmemb, Compare cm
 {
 	if (nmemb <= 256)
 	{
-		quadsort_swap(array, swap, nmemb, cmp);
+		quadsort_swap<T>(array, swap, nmemb, cmp);
 	}
 	else
 	{
-		crum_analyze(array, swap, nmemb, cmp);
+		crum_analyze<T>(array, swap, nmemb, cmp);
 	}
 }
 
@@ -545,11 +543,11 @@ void crumsort(Iterator begin, const Iterator end, Compare cmp, size_t max_swap_s
 	if (nmemb <= 256)
 	{
 		detail::swap_space<T> swap(nmemb);
-		detail::quadsort_swap(begin, swap, nmemb, cmp);
+		detail::quadsort_swap<T>(begin, swap, nmemb, cmp);
 		return;
 	}
 	detail::swap_space<T> swap(max_swap_size);
-	detail::crum_analyze(begin, swap, nmemb, cmp);
+	detail::crum_analyze<T>(begin, swap, nmemb, cmp);
 }
 
 template<typename Iterator>

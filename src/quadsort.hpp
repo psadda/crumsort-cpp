@@ -427,6 +427,7 @@ void tail_merge(Iterator array, T* swap, size_t swap_size, size_t nmemb, size_t 
 		block *= 2;
 	}
 }
+
 template<typename Iterator, typename Compare>
 size_t quad_swap(Iterator array, size_t nmemb, Compare cmp)
 {

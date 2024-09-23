@@ -7,9 +7,7 @@ Porting crumsort and quadsort to C++ is not as trivial as one might expect. The 
 
 - They take raw pointers as input, not random access iterators. That means they only work for arrays of contiguous memory, like `std::vector`, and not on discontiguous containers, like `std::deque`.
 - They use C99 variable length arrays, which are not part of the C++ standard. Some C++ compilers support VLAs as a language extension, but others (MSVC) do not.
-- They assume that that the sorted type is [trivial](https://en.cppreference.com/w/cpp/named_req/TrivialType).
-
-I will work on fixing these limitations as time allows.
+- They assume that that the sorted type is [trivial](https://en.cppreference.com/w/cpp/named_req/TrivialType). That rules out huge swaths of types that you'd probably want to sort, like `std::string` and `std::unique_ptr<T>`.
 
 See the original C implementations at [scandum/crumsort](https://github.com/scandum/crumsort) and [scandum/quadsort](https://github.com/scandum/quadsort) for detailed descriptions of the algorithms and their properties.
 

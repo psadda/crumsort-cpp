@@ -79,7 +79,7 @@
   \
 	ptl = array + 1; ptr = array + 3; pts = swap + 3;  \
 	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
-	*pts = cmp(*ptl, *ptr)  == false ? *ptl : *ptr;
+	*pts = scandum_greater(cmp, *ptl, *ptr) ? *ptl : *ptr;
 
 #define scandum_parity_merge_four(array, swap, x, ptl, ptr, pts, cmp)  \
 	ptl = array + 0; ptr = array + 4; pts = swap;  \
@@ -92,7 +92,7 @@
 	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
 	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
 	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
-	*pts = cmp(*ptl, *ptr)  == false ? *ptl : *ptr;
+	*pts = scandum_greater(cmp, *ptl, *ptr) ? *ptl : *ptr;
 
 
 #if !defined __clang__
@@ -203,7 +203,7 @@ void parity_swap_six(Iterator array, T* swap, Compare cmp)
 
 	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
 	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
-	*pta = cmp(*ptl, *ptr)  == false ? *ptl : *ptr;
+	*pta = scandum_greater(cmp, *ptl, *ptr) ? *ptl : *ptr;
 }
 
 template<typename T, typename Iterator, typename Compare>
@@ -312,7 +312,7 @@ void parity_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compar
 		while (--left)
 		{
 			*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
-			*tpd-- = cmp(*tpl, *tpr)  == false ? *tpl-- : *tpr--;
+			*tpd-- = scandum_greater(cmp, *tpl, *tpr) ? *tpl-- : *tpr--;
 		}
 	}
 	else
@@ -324,7 +324,7 @@ void parity_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compar
 			scandum_tail_branchless_merge(tpd, y, tpl, tpr, cmp);
 		}
 	}
-	*tpd = cmp(*tpl, *tpr)  == false ? *tpl : *tpr;
+	*tpd = scandum_greater(cmp, *tpl, *tpr) ? *tpl : *tpr;
 }
 
 template<typename T, typename Iterator, typename Compare>
@@ -531,7 +531,7 @@ size_t quad_swap(Iterator array, size_t nmemb, Compare cmp)
 			{
 				goto ordered;
 			}
-			if (v1 + v2 + v3 + v4 == 0 && cmp(*(pta + 1), *(pta + 2))  == false && cmp(*(pta + 3), *(pta + 4))  == false && cmp(*(pta + 5), *(pta + 6))  == false)
+			if (v1 + v2 + v3 + v4 == 0 && scandum_greater(cmp, *(pta + 1), *(pta + 2)) && scandum_greater(cmp, *(pta + 3), *(pta + 4)) && scandum_greater(cmp, *(pta + 5), *(pta + 6)))
 			{
 				pts = pta;
 				goto reversed;
@@ -619,7 +619,7 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 
 	if (left + 1 >= right && right >= left && left >= 32)
 	{
-		if (scandum_greater(cmp, *(ptl + 15), *ptr) && scandum_greater(cmp, *ptl, *(ptr + 15)) == true && scandum_not_greater(cmp, *tpl, *(tpr - 15)) && cmp(*(tpl - 15), *tpr))
+		if (scandum_greater(cmp, *(ptl + 15), *ptr) && scandum_not_greater(cmp, *ptl, *(ptr + 15)) && scandum_greater(cmp, *tpl, *(tpr - 15)) && scandum_not_greater(cmp, *(tpl - 15), *tpr))
 		{
 			parity_merge(dest, from, left, right, cmp);
 			return;
@@ -675,7 +675,7 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 			loop = 8; do
 			{
 				*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
-				*tpd-- = cmp(*tpl, *tpr)  == false ? *tpl-- : *tpr--;
+				*tpd-- = scandum_greater(cmp, *tpl, *tpr) ? *tpl-- : *tpr--;
 			}
 			while (--loop);
 		}

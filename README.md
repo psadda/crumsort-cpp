@@ -45,7 +45,7 @@ Progress
 - [x] Accept any random access iterator (not just raw pointers)
 - [x] Support types that are not trivially copyable
 - [x] Support types that do not a have a trivial default constructor
-- [ ] Support types that do not have *any* default constructor
+- [x] Support types that do not have *any* default constructor
 - [ ] Support move only types
 - [ ] Re-enable optimizations for primitive types
 - [ ] Update benchmarks

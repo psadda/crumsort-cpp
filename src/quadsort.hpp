@@ -25,7 +25,8 @@
 	} \
 	else \
 	{ \
-		std::copy(input, (input) + (length), output); \
+		auto it = input; \
+		std::copy(it, it + (length), output); \
 	}
 
 #define scandum_copy_overlapping_range(T, output, input, length) \
@@ -37,10 +38,12 @@
 	} \
 	else \
 	{ \
-		assert((output) < (input) || (output) > (input) + (length)); \
-		std::copy_backward(input, (input) + (length), output); \
+		auto in_begin = input; \
+		auto in_end = in_begin + (length); \
+		auto out = output; \
+		assert(out < in_begin || out > in_end); \
+		std::copy_backward(in_begin, in_end, out); \
 	}
-
 
 // utilize branchless ternary operations in clang
 

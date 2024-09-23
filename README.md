@@ -43,7 +43,7 @@ Progress
 - [x] Accept functors as the predicate
 - [x] Remove use of C99 VLAs
 - [x] Accept any random access iterator (not just raw pointers)
-- [x] Support types that are not trivially copyable (requires removing uses of `memcpy`, `memmove`, `memset`)
+- [x] Support types that are not trivially copyable
 - [x] Support types that do not a have a trivial default constructor
 - [ ] Support types that do not have *any* default constructor
 - [ ] Support move only types

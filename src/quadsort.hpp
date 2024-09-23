@@ -3,7 +3,7 @@
 
 // quadsort 1.2.1.3 - Igor van den Hoven ivdhoven@gmail.com
 
-#include <algorithm>   // for std::copy
+#include <algorithm>   // for std::copy and std::copy_backward
 #include <cassert>
 #include <cstring>     // for std::memcpy, std::memmove, std::memset
 #include <type_traits>

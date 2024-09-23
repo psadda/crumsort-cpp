@@ -125,10 +125,10 @@ void crum_analyze(Iterator array, T* swap, size_t swap_size, size_t nmemb, Compa
 			case 7: quad_reversal(array, ptd); return;
 		}
 
-		if (asum && abalance) {detail::quad_reversal(array,   pta); abalance = 0;}
-		if (bsum && bbalance) {detail::quad_reversal(pta + 1, ptb); bbalance = 0;}
-		if (csum && cbalance) {detail::quad_reversal(ptb + 1, ptc); cbalance = 0;}
-		if (dsum && dbalance) {detail::quad_reversal(ptc + 1, ptd); dbalance = 0;}
+		if (asum && abalance) {quad_reversal(array,   pta); abalance = 0;}
+		if (bsum && bbalance) {quad_reversal(pta + 1, ptb); bbalance = 0;}
+		if (csum && cbalance) {quad_reversal(ptb + 1, ptc); cbalance = 0;}
+		if (dsum && dbalance) {quad_reversal(ptc + 1, ptd); dbalance = 0;}
 	}
 
 #ifdef cmp

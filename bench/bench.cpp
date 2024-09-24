@@ -31,7 +31,19 @@
 
 //#define cmp(a,b) (*(a) > *(b)) // uncomment for faster primitive comparisons
 
-const char *sorts[] = { "*", "qsort", "crumsort", "quadsort" };
+const char *sorts[] = {
+	"*",
+	"qsort",
+	"crumsort",
+	"quadsort",
+	"blitsort",
+	"fluxsort",
+	"gridsort",
+	"rhsort",
+	"pdqsort",
+	"skasort",
+	"timsort"
+};
 
 //#define SKIP_STRINGS
 //#define SKIP_DOUBLES
@@ -180,8 +192,6 @@ NO_INLINE int cmp_double_ptr(const void * a, const void * b)
 
 // c++ comparison functions
 
-#ifdef __GNUG__
-
 NO_INLINE bool cpp_cmp_int(const int &a, const int &b)
 {
 	COMPARISON_PP;
@@ -195,8 +205,6 @@ NO_INLINE bool cpp_cmp_str(char const* const a, char const* const b)
 
 	return strcmp(a, b) < 0;
 }
-
-#endif
 
 #ifdef _WIN32
 static uint64_t CLOCK_FREQUENCY;
@@ -335,19 +343,17 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 				case 'r' + 'h' * 32 + 's' * 1024: if (size == sizeof(int)) rhsort32(pta, max); else return; break;
 #endif
 
-#ifdef __GNUG__
 				case 's' + 'o' * 32 + 'r' * 1024: if (size == sizeof(int)) std::sort(pta, pta + max); else if (size == sizeof(long long)) std::sort(ptla, ptla + max); else std::sort(ptda, ptda + max); break;
 				case 's' + 't' * 32 + 'a' * 1024: if (size == sizeof(int)) std::stable_sort(pta, pta + max); else if (size == sizeof(long long)) std::stable_sort(ptla, ptla + max); else std::stable_sort(ptda, ptda + max); break;
 
-  #ifdef PDQSORT_H
+#ifdef PDQSORT_H
 				case 'p' + 'd' * 32 + 'q' * 1024: if (size == sizeof(int)) pdqsort(pta, pta + max); else if (size == sizeof(long long)) pdqsort(ptla, ptla + max); else pdqsort(ptda, ptda + max); break;
-  #endif
-  #ifdef SKASORT_HPP
+#endif
+#ifdef SKASORT_HPP
 				case 's' + 'k' * 32 + 'a' * 1024: swap = malloc(max * size); if (size == sizeof(int)) ska_sort_copy(pta, pta + max, (int *) swap); else if (size == sizeof(long long)) ska_sort_copy(ptla, ptla + max, (long long *) swap); else repetitions = 0; free(swap); break;
-  #endif
-  #ifdef GFX_TIMSORT_HPP
+#endif
+#ifdef GFX_TIMSORT_HPP
 				case 't' + 'i' * 32 + 'm' * 1024: if (size == sizeof(int)) gfx::timsort(pta, pta + max, cpp_cmp_int); else if (size == sizeof(long long)) gfx::timsort(ptla, ptla + max); else gfx::timsort(ptda, ptda + max); break;
-  #endif
 #endif
 				default:
 					switch (name32)

@@ -13,12 +13,21 @@
 */
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/time.h>
 #include <time.h>
 #include <errno.h>
 #include <math.h>
+
+#ifdef _WIN32
+#	define WIN32_LEAN_AND_MEAN
+#	define NOMINMAX
+#	include <windows.h>
+#	include <profileapi.h> // for QueryPerformanceFrequency and QueryPerformanceCounter
+#else
+#	include <time.h>       // for clock_getres and clock_gettime
+#endif
 
 //#define cmp(a,b) (*(a) > *(b)) // uncomment for faster primitive comparisons
 
@@ -28,62 +37,23 @@ const char *sorts[] = { "*", "qsort", "crumsort", "quadsort" };
 //#define SKIP_DOUBLES
 //#define SKIP_LONGS
 
-#if __has_include("blitsort.h")
-  #include "blitsort.h" // curl "https://raw.githubusercontent.com/scandum/blitsort/master/src/blitsort.{c,h}" -o "blitsort.#1"
-#endif
-#if __has_include("crumsort.h")
-  #include "crumsort.h" // curl "https://raw.githubusercontent.com/scandum/crumsort/master/src/crumsort.{c,h}" -o "crumsort.#1"
-#endif
-#if __has_include("dripsort.h")
-  #include "dripsort.h"
-#endif
-#if __has_include("flowsort.h")
-  #include "flowsort.h"
-#endif
-#if __has_include("fluxsort.h")
-  #include "fluxsort.h" // curl "https://raw.githubusercontent.com/scandum/fluxsort/master/src/fluxsort.{c,h}" -o "fluxsort.#1"
-#endif
-#if __has_include("gridsort.h")
-  #include "gridsort.h" // curl "https://raw.githubusercontent.com/scandum/gridsort/master/src/gridsort.{c,h}" -o "gridsort.#1"
-#endif
-#if __has_include("octosort.h")
-  #include "octosort.h" // curl "https://raw.githubusercontent.com/scandum/octosort/master/src/octosort.{c,h}" -o "octosort.#1"
-#endif
-#if __has_include("piposort.h")
-  #include "piposort.h" // curl "https://raw.githubusercontent.com/scandum/piposort/master/src/piposort.{c,h}" -o "piposort.#1"
-#endif
-#if __has_include("quadsort.h")
-  #include "quadsort.h" // curl "https://raw.githubusercontent.com/scandum/quadsort/master/src/quadsort.{c,h}" -o "quadsort.#1"
-#endif
-#if __has_include("skipsort.h")
-  #include "skipsort.h" // curl "https://raw.githubusercontent.com/scandum/wolfsort/master/src/skipsort.{c,h}" -o "skipsort.#1"
-#endif
-#if __has_include("wolfsort.h")
-  #include "wolfsort.h" // curl "https://raw.githubusercontent.com/scandum/wolfsort/master/src/wolfsort.{c,h}" -o "wolfsort.#1"
-#endif
+#define BLITSORT_H
+#define CRUMSORT_H
+#define FLUXSORT_H
+#define GRIDSORT_H
+#define QUADSORT_H
+#include "scandum_sorts.h"
 
-#if __has_include("rhsort.c")
-    #define RHSORT_C
-    #include "rhsort.c" // curl https://raw.githubusercontent.com/mlochbaum/rhsort/master/rhsort.c > rhsort.c
-#endif
+#define RHSORT_C
+extern "C" void rhsort32(int* array, size_t n);
 
-#ifdef __GNUG__
-  #include <algorithm>
-  #if __has_include("pdqsort.h")
-    #include "pdqsort.h" // curl https://raw.githubusercontent.com/orlp/pdqsort/master/pdqsort.h > pdqsort.h
-  #endif
-  #if __has_include("ska_sort.hpp")
-    #define SKASORT_HPP
-    #include "ska_sort.hpp" // curl https://raw.githubusercontent.com/skarupke/ska_sort/master/ska_sort.hpp > ska_sort.hpp
-  #endif
-  #if __has_include("timsort.hpp")
-    #include "timsort.hpp" // curl https://raw.githubusercontent.com/timsort/cpp-TimSort/master/include/gfx/timsort.hpp > timsort.hpp
-  #endif
-#endif
+#include "pdqsort.h"
+#define SKASORT_HPP
 
-#if __has_include("antiqsort.c")
-  #include "antiqsort.c"
-#endif
+#include "ska_sort.hpp"
+#include "timsort.hpp"
+
+#include <algorithm>
 
 //typedef int CMPFUNC (const void *a, const void *b);
 
@@ -151,10 +121,10 @@ NO_INLINE int cmp_float(const void * a, const void * b)
 	return *(float *) a - *(float *) b;
 }
 
-NO_INLINE int cmp_long_double(const void * a, const void * b)
+NO_INLINE int cmp_double(const void * a, const void * b)
 {
-	const long double fa = *(const long double *) a;
-	const long double fb = *(const long double *) b;
+	const double fa = *(const double *) a;
+	const double fb = *(const double *) b;
 
 	COMPARISON_PP;
 
@@ -198,10 +168,10 @@ NO_INLINE int cmp_long_ptr(const void * a, const void * b)
 	return (*fa > *fb) - (*fa < *fb);
 }
 
-NO_INLINE int cmp_long_double_ptr(const void * a, const void * b)
+NO_INLINE int cmp_double_ptr(const void * a, const void * b)
 {
-	const long double *fa = *(const long double **) a;
-	const long double *fb = *(const long double **) b;
+	const double *fa = *(const double **) a;
+	const double *fb = *(const double **) b;
 
 	COMPARISON_PP;
 
@@ -228,13 +198,30 @@ NO_INLINE bool cpp_cmp_str(char const* const a, char const* const b)
 
 #endif
 
-long long utime()
+#ifdef _WIN32
+static uint64_t CLOCK_FREQUENCY;
+#endif
+
+uint64_t utime()
 {
-	struct timeval now_time;
+#ifdef _WIN32
+	LARGE_INTEGER result;
+	QueryPerformanceCounter(&result);
+	uint64_t result64 = static_cast<uint64_t>(result.QuadPart) * 1000;
+	return result64 / CLOCK_FREQUENCY;
+#else
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 
-	gettimeofday(&now_time, NULL);
+	// Convert the seconds part of the time to milliseconds
+	uint64_t result64 = static_cast<uint64_t>(ts.tv_sec) * 1'000'000'000;
 
-	return now_time.tv_sec * 1000000LL + now_time.tv_usec;
+	// Add the nanoseconds part
+	result64 += static_cast<uint64_t>(ts.tv_nsec);
+
+	// Convert the result to milliseconds
+	result64 /= 1'000'000;
+#endif
 }
 
 void seed_rand(unsigned long long seed)
@@ -248,7 +235,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 	char temp[100];
 	static char compare = 0;
 	long long *ptla = (long long *) array, *ptlv = (long long *) valid;
-	long double *ptda = (long double *) array, *ptdv = (long double *) valid;
+	double *ptda = (double *) array, *ptdv = (double *) valid;
 	int *pta = (int *) array, *ptv = (int *) valid, rep, sam, max, cnt, name32;
 
 #ifdef SKASORT_HPP
@@ -453,11 +440,11 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 				break;
 			}
 		}
-		else if (size == sizeof(int *) && cmpf == cmp_long_double_ptr)
+		else if (size == sizeof(int *) && cmpf == cmp_double_ptr)
 		{
-			long double **pptda = (long double **) array;
+			double **pptda = (double **) array;
 
-			if (cmp_long_double_ptr(&pptda[cnt - 1], &pptda[cnt]) > 0)
+			if (cmp_double_ptr(&pptda[cnt - 1], &pptda[cnt]) > 0)
 			{
 				printf("%17s: not properly sorted at index %d. (%Lf vs %Lf\n", name, cnt, *pptda[cnt - 1], *pptda[cnt]);
 				break;
@@ -503,9 +490,9 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 				break;
 			}
 		}
-		else if (size == sizeof(long double))
+		else if (size == sizeof(double))
 		{
-			if (cmp_long_double(&ptda[cnt - 1], &ptda[cnt]) > 0)
+			if (cmp_double(&ptda[cnt - 1], &ptda[cnt]) > 0)
 			{
 				printf("%17s: not properly sorted at index %d. (%Lf vs %Lf\n", name, cnt, ptda[cnt - 1], ptda[cnt]);
 				break;
@@ -556,7 +543,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 				break;
 			}
 		}
-		else if (size == sizeof(long double))
+		else if (size == sizeof(double))
 		{
 			if (ptda[cnt] != ptdv[cnt])
 			{
@@ -784,6 +771,16 @@ int main(int argc, char **argv)
 	int cnt, mem;
 	VAR *a_array, *r_array, *v_array, sum;
 
+#ifdef _WIN32
+	LARGE_INTEGER result;
+	if (QueryPerformanceFrequency(&result)) {
+		CLOCK_FREQUENCY = static_cast<uint64_t>(result.QuadPart);
+	} else {
+		fprintf(stderr, "%s", "Error: could not initialize the system monotonic clock\n");
+		return 1;
+	}
+#endif
+
 	if (argc >= 1 && argv[1] && *argv[1])
 	{
 		max = atoi(argv[1]);
@@ -808,7 +805,7 @@ int main(int argc, char **argv)
 
 	seed = seed ? seed : time(NULL);
 
-	printf("Info: int = %lu, long long = %lu, long double = %lu\n\n", sizeof(int) * 8, sizeof(long long) * 8, sizeof(long double) * 8);
+	printf("Info: int = %lu, long long = %lu, double = %lu\n\n", sizeof(int) * 8, sizeof(long long) * 8, sizeof(double) * 8);
 
 	printf("Benchmark: array size: %d, samples: %d, repetitions: %d, seed: %d\n\n", max, samples, repetitions, seed);
 
@@ -856,14 +853,14 @@ int main(int argc, char **argv)
 		free(buffer);
 	}
 
-	// long double table
+	// double table
 
 	{
-		long double **da_array = (long double **) malloc(max * sizeof(long double *));
-		long double **dr_array = (long double **) malloc(mem * sizeof(long double *));
-		long double **dv_array = (long double **) malloc(max * sizeof(long double *));
+		double **da_array = (double **) malloc(max * sizeof(double *));
+		double **dr_array = (double **) malloc(mem * sizeof(double *));
+		double **dv_array = (double **) malloc(max * sizeof(double *));
 
-		long double *buffer = (long double *) malloc(mem * sizeof(long double));
+		double *buffer = (double *) malloc(mem * sizeof(double));
 
 		if (da_array == NULL || dr_array == NULL || dv_array == NULL)
 		{
@@ -876,12 +873,12 @@ int main(int argc, char **argv)
 
 		for (cnt = 0 ; cnt < mem ; cnt++)
 		{
-			buffer[cnt] = (long double) rand();
-			buffer[cnt] += (long double) ((unsigned long long) rand() << 32ULL);
+			buffer[cnt] = (double) rand();
+			buffer[cnt] += (double) ((unsigned long long) rand() << 32ULL);
 
 			dr_array[cnt] = buffer + cnt;
 		}
-		run_test(da_array, dr_array, dv_array, max, max, samples, repetitions, 0, "random double", sizeof(long double *), cmp_long_double_ptr);
+		run_test(da_array, dr_array, dv_array, max, max, samples, repetitions, 0, "random double", sizeof(double *), cmp_double_ptr);
 
 		free(da_array);
 		free(dr_array);
@@ -964,9 +961,9 @@ int main(int argc, char **argv)
 	// 128 bit
 
 #ifndef SKIP_DOUBLES
-	long double *da_array = (long double *) malloc(max * sizeof(long double));
-	long double *dr_array = (long double *) malloc(mem * sizeof(long double));
-	long double *dv_array = (long double *) malloc(max * sizeof(long double));
+	double *da_array = (double *) malloc(max * sizeof(double));
+	double *dr_array = (double *) malloc(mem * sizeof(double));
+	double *dv_array = (double *) malloc(max * sizeof(double));
 
 	if (da_array == NULL || dr_array == NULL || dv_array == NULL)
 	{
@@ -979,21 +976,21 @@ int main(int argc, char **argv)
 
 	for (cnt = 0 ; cnt < mem ; cnt++)
 	{
-		dr_array[cnt] = (long double) rand();
-		dr_array[cnt] += (long double) ((unsigned long long) rand() << 32ULL);
+		dr_array[cnt] = (double) rand();
+		dr_array[cnt] += (double) ((unsigned long long) rand() << 32ULL);
 		dr_array[cnt] += 1.0L / 3.0L;
 	}
 
-	memcpy(dv_array, dr_array, max * sizeof(long double));
-	quadsort(dv_array, max, sizeof(long double), cmp_long_double);
+	memcpy(dv_array, dr_array, max * sizeof(double));
+	quadsort(dv_array, max, sizeof(double), cmp_double);
 
 	for (cnt = 0 ; (size_t) cnt < sizeof(sorts) / sizeof(char *) ; cnt++)
 	{
-		test_sort(da_array, dr_array, dv_array, max, max, samples, repetitions, qsort, sorts[cnt], "random order", sizeof(long double), cmp_long_double);
+		test_sort(da_array, dr_array, dv_array, max, max, samples, repetitions, qsort, sorts[cnt], "random order", sizeof(double), cmp_double);
 	}
 #ifndef cmp
 #ifdef QUADSORT_H
-	test_sort(da_array, dr_array, dv_array, max, max, samples, repetitions, qsort, "s_quadsort", "random order", sizeof(long double), cmp_long_double_ptr);
+	test_sort(da_array, dr_array, dv_array, max, max, samples, repetitions, qsort, "s_quadsort", "random order", sizeof(double), cmp_double_ptr);
 #endif
 #endif
 	free(da_array);
@@ -1191,17 +1188,6 @@ int main(int argc, char **argv)
 		r_array[cnt] = bit_reverse(cnt);
 	}
 	run_test(a_array, r_array, v_array, max, max, samples, repetitions, 0, "bit reversal", sizeof(VAR), cmp_int);
-
-#ifndef cmp
-  #ifdef ANTIQSORT
-    test_antiqsort;
-  #endif
-#endif
-
-#define QUAD_DEBUG
-#if __has_include("extra_tests.c")
-  #include "extra_tests.c"
-#endif
 
 	free(a_array);
 	free(r_array);

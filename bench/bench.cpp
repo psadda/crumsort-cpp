@@ -34,13 +34,15 @@
 const char *sorts[] = {
 	"*",
 	"qsort",
+	"sort",
+	"stablesort",
 	"crumsort",
 	"quadsort",
 	"blitsort",
 	"fluxsort",
 	"gridsort",
-	"rhsort",
 	"pdqsort",
+	"rhsort",
 	"skasort",
 	"timsort"
 };

@@ -28,6 +28,10 @@
 #define scandum_greater(less, lhs, rhs) less(rhs, lhs)
 #define scandum_not_greater(less, lhs, rhs) (less(lhs, rhs) || !less(rhs, lhs))
 
+#define scandum_move(x) std::move(x)
+#define scandum_conditional_assign(pred, dest_a, dest_b, value) \
+	if (pred) dest_a = scandum_move(value); else dest_b = scandum_move(value)
+
 namespace scandum {
 
 namespace detail {
@@ -278,7 +282,7 @@ Iterator crum_median_of_cbrt(Iterator array, swap_space<T>& swap, size_t nmemb, 
 
 	for (cnt = cbrt ; cnt ; cnt--)
 	{
-		*swap.begin() = *--piv; *piv = *pta; *pta = *swap.begin();
+		*swap.begin() = scandum_move(*--piv); *piv = scandum_move(*pta); *pta = scandum_move(*swap.begin());
 
 		pta -= div;
 	}
@@ -343,7 +347,8 @@ size_t fulcrum_default_partition(Iterator array, swap_space<T>& swap, Iterator p
 
 			for (i = 16 ; i ; i--)
 			{
-				val = scandum_not_greater(cmp, *pta, *piv); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+				val = scandum_not_greater(cmp, *pta, *piv);
+				scandum_conditional_assign(val, ptl[m], ptr[m], *pta++); m += val; ptr--;
 			}
 		}
 		if (pta - ptl - m >= 16)
@@ -352,7 +357,8 @@ size_t fulcrum_default_partition(Iterator array, swap_space<T>& swap, Iterator p
 
 			for (i = 16 ; i ; i--)
 			{
-				val = scandum_not_greater(cmp, *tpa, *piv); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
+				val = scandum_not_greater(cmp, *tpa, *piv);
+				scandum_conditional_assign(val, ptl[m], ptr[m], *tpa--); m += val; ptr--;
 			}
 		}
 	}
@@ -361,24 +367,30 @@ size_t fulcrum_default_partition(Iterator array, swap_space<T>& swap, Iterator p
 	{
 		for (cnt = nmemb % 16 ; cnt ; cnt--)
 		{
-			val = scandum_not_greater(cmp, *pta, *piv); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+			val = scandum_not_greater(cmp, *pta, *piv);
+			scandum_conditional_assign(val, ptl[m], ptr[m], *pta++); m += val; ptr--;
 		}
 	}
 	else
 	{
 		for (cnt = nmemb % 16 ; cnt ; cnt--)
 		{
-			val = scandum_not_greater(cmp, *tpa, *piv); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
+			val = scandum_not_greater(cmp, *tpa, *piv);
+			scandum_conditional_assign(val, ptl[m], ptr[m], *tpa--); m += val; ptr--;
 		}
 	}
 	typename swap_space<T>::iterator pta2 = swap.begin();
 
 	for (cnt = 16 ; cnt ; cnt--)
 	{
-		val = scandum_not_greater(cmp, *pta2, *piv); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
-		val = scandum_not_greater(cmp, *pta2, *piv); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
-		val = scandum_not_greater(cmp, *pta2, *piv); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
-		val = scandum_not_greater(cmp, *pta2, *piv); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_not_greater(cmp, *pta2, *piv);
+		scandum_conditional_assign(val, ptl[m], ptr[m], *pta2++); m += val; ptr--;
+		val = scandum_not_greater(cmp, *pta2, *piv);
+		scandum_conditional_assign(val, ptl[m], ptr[m], *pta2++); m += val; ptr--;
+		val = scandum_not_greater(cmp, *pta2, *piv);
+		scandum_conditional_assign(val, ptl[m], ptr[m], *pta2++); m += val; ptr--;
+		val = scandum_not_greater(cmp, *pta2, *piv);
+		scandum_conditional_assign(val, ptl[m], ptr[m], *pta2++); m += val; ptr--;
 	}
 	return m;
 }
@@ -410,7 +422,8 @@ size_t fulcrum_reverse_partition(Iterator array, swap_space<T>& swap, Iterator p
 
 			for (i = 16 ; i ; i--)
 			{
-				val = scandum_greater(cmp, *piv, *pta); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+				val = scandum_greater(cmp, *piv, *pta);
+				scandum_conditional_assign(val, ptl[m], ptr[m], *pta++); m += val; ptr--;
 			}
 		}
 		if (pta - ptl - m >= 16)
@@ -419,7 +432,8 @@ size_t fulcrum_reverse_partition(Iterator array, swap_space<T>& swap, Iterator p
 
 			for (i = 16 ; i ; i--)
 			{
-				val = scandum_greater(cmp, *piv, *tpa); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
+				val = scandum_greater(cmp, *piv, *tpa);
+				scandum_conditional_assign(val, ptl[m], ptr[m], *tpa--); m += val; ptr--;
 			}
 		}
 	}
@@ -428,24 +442,30 @@ size_t fulcrum_reverse_partition(Iterator array, swap_space<T>& swap, Iterator p
 	{
 		for (cnt = nmemb % 16 ; cnt ; cnt--)
 		{
-			val = scandum_greater(cmp, *piv, *pta); ptl[m] = ptr[m] = *pta++; m += val; ptr--;
+			val = scandum_greater(cmp, *piv, *pta);
+			scandum_conditional_assign(val, ptl[m], ptr[m], *pta++); m += val; ptr--;
 		}
 	}
 	else
 	{
 		for (cnt = nmemb % 16 ; cnt ; cnt--)
 		{
-			val = scandum_greater(cmp, *piv, *tpa); ptl[m] = ptr[m] = *tpa--; m += val; ptr--;
+			val = scandum_greater(cmp, *piv, *tpa);
+			scandum_conditional_assign(val, ptl[m], ptr[m], *tpa--); m += val; ptr--;
 		}
 	}
 	typename swap_space<T>::iterator pta2 = swap.begin();
 
 	for (cnt = 16 ; cnt ; cnt--)
 	{
-		val = scandum_greater(cmp, *piv, *pta2); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
-		val = scandum_greater(cmp, *piv, *pta2); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
-		val = scandum_greater(cmp, *piv, *pta2); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
-		val = scandum_greater(cmp, *piv, *pta2); ptl[m] = ptr[m] = *pta2++; m += val; ptr--;
+		val = scandum_greater(cmp, *piv, *pta2);
+		scandum_conditional_assign(val, ptl[m], ptr[m], *pta2++); m += val; ptr--;
+		val = scandum_greater(cmp, *piv, *pta2);
+		scandum_conditional_assign(val, ptl[m], ptr[m], *pta2++); m += val; ptr--;
+		val = scandum_greater(cmp, *piv, *pta2);
+		scandum_conditional_assign(val, ptl[m], ptr[m], *pta2++); m += val; ptr--;
+		val = scandum_greater(cmp, *piv, *pta2);
+		scandum_conditional_assign(val, ptl[m], ptr[m], *pta2++); m += val; ptr--;
 	}
 	return m;
 }
@@ -470,7 +490,7 @@ void fulcrum_partition(Iterator array, swap_space<T>& swap, T* max, size_t nmemb
 
 			if (generic) break;
 		}
-		piv = *ptp;
+		piv = scandum_move(*ptp);
 
 		if (max && scandum_not_greater(cmp, *max, piv))
 		{
@@ -483,12 +503,12 @@ void fulcrum_partition(Iterator array, swap_space<T>& swap, T* max, size_t nmemb
 			max = nullptr;
 			continue;
 		}
-		*ptp = array[--nmemb];
+		*ptp = scandum_move(array[--nmemb]);
 
 		a_size = fulcrum_default_partition<T>(array, swap, array, &(T&)piv, nmemb, cmp);
 		s_size = nmemb - a_size;
 
-		ptp = array + a_size; array[nmemb] = *ptp; *ptp = piv;
+		ptp = array + a_size; array[nmemb] = scandum_move(*ptp); *ptp = scandum_move(piv);
 
 		if (a_size <= s_size / 32 || s_size <= CRUM_OUT)
 		{
@@ -561,5 +581,7 @@ void crumsort(Iterator begin, Iterator end)
 
 #undef scandum_greater
 #undef scandum_not_greater
+#undef scandum_move
+#undef scandom_conditional_assign
 
 #endif

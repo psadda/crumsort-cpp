@@ -1262,9 +1262,9 @@ void quadsort(Iterator begin, Iterator end, Compare cmp)
 	{
 		detail::swap_space<T> swap(nmemb);
 
-		detail::tail_swap(pta, swap.begin(), nmemb, cmp);
+		detail::tail_swap<T>(pta, swap, nmemb, cmp);
 	}
-	else if (detail::quad_swap(pta, nmemb, cmp) == 0)
+	else if (detail::quad_swap<T>(pta, nmemb, cmp) == 0)
 	{
 		size_t block, swap_size = nmemb;
 
@@ -1272,9 +1272,9 @@ void quadsort(Iterator begin, Iterator end, Compare cmp)
 
 		detail::swap_space<T> swap(swap_size);
 
-		block = detail::quad_merge(pta, swap.begin(), nmemb, 32, cmp);
+		block = detail::quad_merge<T>(pta, swap, nmemb, 32, cmp);
 
-		detail::rotate_merge(pta, swap.begin(), nmemb, block, cmp);
+		detail::rotate_merge<T>(pta, swap, nmemb, block, cmp);
 	}
 }
 

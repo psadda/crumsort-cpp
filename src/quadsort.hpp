@@ -904,31 +904,80 @@ void partial_backward_merge(Iterator array, swap_space<T>& swap, size_t nmemb, s
 
 	while (tpl > array + 16 && tpr > swap.begin() + 16)
 	{
-	tpl_tpr16: if (scandum_not_greater(cmp, *tpl, *(tpr - 15)))
-	{
-		loop = 16; do *tpa-- = scandum_move(*tpr--); while (--loop);
+	tpl_tpr16:
+		if (scandum_not_greater(cmp, *tpl, *(tpr - 15)))
+		{
+			loop = 16; do *tpa-- = scandum_move(*tpr--); while (--loop);
 
-		if (tpr > swap.begin() + 16) { goto tpl_tpr16; } break;
+			if (tpr > swap.begin() + 16) { goto tpl_tpr16; } break;
+		}
+
+	tpl16_tpr:
+		if (scandum_greater(cmp, *(tpl - 15), *tpr))
+		{
+			loop = 16; do *tpa-- = scandum_move(*tpl--); while (--loop);
+
+			if (tpl > array + 16) { goto tpl16_tpr; } break;
+		}
+	loop = 8;
+		do
+		{
+			if (scandum_not_greater(cmp, *tpl, *(tpr - 1)))
+			{
+				*tpa-- = scandum_move(*tpr--); *tpa-- = scandum_move(*tpr--);
+			}
+			else if (scandum_greater(cmp, *(tpl - 1), *tpr))
+			{
+				*tpa-- = scandum_move(*tpl--); *tpa-- = scandum_move(*tpl--);
+			}
+			else
+			{
+				x = scandum_not_greater(cmp, *tpl, *tpr);
+				tpa--;
+				tpa[x] = scandum_move(*tpr);
+				tpr -= 1;
+				tpa[!x] = scandum_move(*tpl);
+				tpl -= 1;
+				tpa--;
+				scandum_tail_branchless_merge(tpa, x, tpl, tpr, cmp);
+			}
+		} while (--loop);
 	}
 
-tpl16_tpr: if (scandum_greater(cmp, *(tpl - 15), *tpr))
-{
-	loop = 16; do *tpa-- = scandum_move(*tpl--); while (--loop);
+	while (tpr > swap.begin() + 1 && tpl > array + 1)
+	{
+	tpr2:
+		if (scandum_not_greater(cmp, *tpl, *(tpr - 1)))
+		{
+			*tpa-- = scandum_move(*tpr--); *tpa-- = scandum_move(*tpr--);
 
-	if (tpl > array + 16) { goto tpl16_tpr; } break;
-}
-loop = 8; do
-{
-	if (scandum_not_greater(cmp, *tpl, *(tpr - 1)))
-	{
-		*tpa-- = scandum_move(*tpr--); *tpa-- = scandum_move(*tpr--);
-	}
-	else if (scandum_greater(cmp, *(tpl - 1), *tpr))
-	{
-		*tpa-- = scandum_move(*tpl--); *tpa-- = scandum_move(*tpl--);
-	}
-	else
-	{
+			if (tpr > swap.begin() + 1) { goto tpr2; } break;
+		}
+
+		if (scandum_greater(cmp, *(tpl - 1), *tpr))
+		{
+			*tpa-- = scandum_move(*tpl--); *tpa-- = scandum_move(*tpl--);
+
+			if (tpl > array + 1) { goto tpl2; } break;
+		}
+		goto cross_swap;
+
+	tpl2:
+		if (scandum_greater(cmp, *(tpl - 1), *tpr))
+		{
+			*tpa-- = scandum_move(*tpl--); *tpa-- = scandum_move(*tpl--);
+
+			if (tpl > array + 1) { goto tpl2; } break;
+		}
+
+		if (scandum_not_greater(cmp, *tpl, *(tpr - 1)))
+		{
+			*tpa-- = scandum_move(*tpr--); *tpa-- = scandum_move(*tpr--);
+
+			if (tpr > swap.begin() + 1) { goto tpr2; } break;
+		}
+	cross_swap:
+
 		x = scandum_not_greater(cmp, *tpl, *tpr);
 		tpa--;
 		tpa[x] = scandum_move(*tpr);
@@ -937,50 +986,6 @@ loop = 8; do
 		tpl -= 1;
 		tpa--;
 		scandum_tail_branchless_merge(tpa, x, tpl, tpr, cmp);
-	}
-} while (--loop);
-	}
-
-	while (tpr > swap.begin() + 1 && tpl > array + 1)
-	{
-	tpr2: if (scandum_not_greater(cmp, *tpl, *(tpr - 1)))
-	{
-		*tpa-- = scandum_move(*tpr--); *tpa-- = scandum_move(*tpr--);
-
-		if (tpr > swap.begin() + 1) { goto tpr2; } break;
-	}
-
-	if (scandum_greater(cmp, *(tpl - 1), *tpr))
-	{
-		*tpa-- = scandum_move(*tpl--); *tpa-- = scandum_move(*tpl--);
-
-		if (tpl > array + 1) { goto tpl2; } break;
-	}
-	goto cross_swap;
-
-tpl2: if (scandum_greater(cmp, *(tpl - 1), *tpr))
-{
-	*tpa-- = scandum_move(*tpl--); *tpa-- = scandum_move(*tpl--);
-
-	if (tpl > array + 1) { goto tpl2; } break;
-}
-
-if (scandum_not_greater(cmp, *tpl, *(tpr - 1)))
-{
-	*tpa-- = scandum_move(*tpr--); *tpa-- = scandum_move(*tpr--);
-
-	if (tpr > swap.begin() + 1) { goto tpr2; } break;
-}
-cross_swap:
-
-x = scandum_not_greater(cmp, *tpl, *tpr);
-tpa--;
-tpa[x] = scandum_move(*tpr);
-tpr -= 1;
-tpa[!x] = scandum_move(*tpl);
-tpl -= 1;
-tpa--;
-scandum_tail_branchless_merge(tpa, x, tpl, tpr, cmp);
 	}
 
 	while (tpr >= swap.begin() && tpl >= array)

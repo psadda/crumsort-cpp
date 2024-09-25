@@ -36,6 +36,8 @@ const char *sorts[] = {
 	"qsort",
 	"sort",
 	"stablesort",
+	"cxcrumsort",
+	"cxquadsort",
 	"crumsort",
 	"quadsort",
 	"blitsort",
@@ -51,6 +53,9 @@ const char *sorts[] = {
 //#define SKIP_DOUBLES
 //#define SKIP_LONGS
 
+#include <crumsort.hpp>
+#include <quadsort.hpp>
+
 #define BLITSORT_H
 #define CRUMSORT_H
 #define FLUXSORT_H
@@ -61,11 +66,11 @@ const char *sorts[] = {
 #define RHSORT_C
 extern "C" void rhsort32(int* array, size_t n);
 
-#include "pdqsort.h"
+#include <pdqsort.h>
 #define SKASORT_HPP
 
-#include "ska_sort.hpp"
-#include "timsort.hpp"
+#include <ska_sort.hpp>
+#include <timsort.hpp>
 
 #include <algorithm>
 
@@ -305,6 +310,12 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 
 			switch (name32)
 			{
+#ifdef SCANDUM_CRUMSORT_HPP
+				case 'c' + 'x' * 32 + 'c' * 1024: if (size == sizeof(int)) scandum::crumsort(pta, pta + max); else if (size == sizeof(long long)) scandum::crumsort(ptla, ptla + max); else scandum::crumsort(ptda, ptda + max); break;
+#endif
+#ifdef SCANDUM_QUADSORT_HPP
+				case 'c' + 'x' * 32 + 'q' * 1024: if (size == sizeof(int)) scandum::quadsort(pta, pta + max); else if (size == sizeof(long long)) scandum::quadsort(ptla, ptla + max); else scandum::quadsort(ptda, ptda + max); break;
+#endif
 #ifdef BLITSORT_H
 				case 'b' + 'l' * 32 + 'i' * 1024: blitsort(array, max, size, cmpf); break;
 #endif

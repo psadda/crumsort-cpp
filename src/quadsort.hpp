@@ -447,9 +447,9 @@ void tail_merge(Iterator array, swap_space<T>& swap, size_t nmemb, size_t block,
 
 	while (block < nmemb && block <= swap.size())
 	{
-		for (pta = array ; pta + block < pte ; pta += block * 2)
+		for (pta = array ; block < pte - pta; pta += block * 2)
 		{
-			if (pta + block * 2 < pte)
+			if (block * 2 < pte - pta)
 			{
 				partial_backward_merge<T>(pta, swap, block * 2, block, cmp);
 
@@ -992,14 +992,23 @@ void partial_backward_merge(Iterator array, swap_space<T>& swap, size_t nmemb, s
 		scandum_tail_branchless_merge(tpa, x, tpl, tpr, cmp);
 	}
 
-	while (tpr >= swap.begin() && tpl >= array)
-	{
-		*tpa-- = scandum_move(scandum_greater(cmp, *tpl, *tpr) ? (T&)*tpl-- : (T&)*tpr--);
+	// TODO: this logic is really ugly and branchy and can probably be simplified
+	while (tpr >= swap.begin() && tpl >= array) {
+		if (scandum_greater(cmp, *tpl, *tpr)) {
+			*tpa = scandum_move((T&)*tpl); --tpa;
+			if (tpl > array) { --tpl; } else break;
+		} else {
+			*tpa = scandum_move((T&)*tpr);
+			if (tpr > swap.begin()) { --tpr; --tpa; } else return;
+		}
 	}
 
-	while (tpr >= swap.begin())
-	{
-		*tpa-- = scandum_move(*tpr--);
+	if (tpr >= swap.begin()) {
+		*tpa = scandum_move(*tpr);
+		while (tpr > swap.begin())
+		{
+			*--tpa = scandum_move(*--tpr);
+		}
 	}
 }
 

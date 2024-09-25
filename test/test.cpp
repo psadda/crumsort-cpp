@@ -16,6 +16,28 @@ int RandomInt() {
 }
 
 //////
+// Custom predicate
+//////
+
+TEST_CASE("crumsort correctly sorts with a custom predicate") {
+	std::vector<int> list;
+	for (int i = 0; i < 100; ++i) list.push_back(RandomInt());
+
+	scandum::crumsort(list.begin(), list.end(), std::greater<int>());
+
+	CHECK(std::is_sorted(list.begin(), list.end(), std::greater<int>()));
+}
+
+TEST_CASE("quadsort correctly sorts with a custom predicate") {
+	std::vector<int> list;
+	for (int i = 0; i < 100; ++i) list.push_back(RandomInt());
+
+	scandum::quadsort(list.begin(), list.end(), std::greater<int>());
+
+	CHECK(std::is_sorted(list.begin(), list.end(), std::greater<int>()));
+}
+
+//////
 // Nontrivial default constructor
 //////
 
@@ -28,7 +50,10 @@ struct NonTrivialDefaultConstructor {
 	bool operator==(const NonTrivialDefaultConstructor& other) const { return value == other.value; }
 };
 
-TEST_CASE("crumsort sorts types with nontrivial default constructor") {
+static_assert (!std::is_trivially_default_constructible_v<NonTrivialDefaultConstructor>);
+static_assert (std::is_default_constructible_v<NonTrivialDefaultConstructor>);
+
+TEST_CASE("crumsort sorts types with a nontrivial default constructor") {
 	std::vector<NonTrivialDefaultConstructor> list;
 	for (int i = 0; i < 100; ++i) list.push_back(NonTrivialDefaultConstructor());
 
@@ -37,7 +62,7 @@ TEST_CASE("crumsort sorts types with nontrivial default constructor") {
 	CHECK(std::is_sorted(list.begin(), list.end()));
 }
 
-TEST_CASE("quadsort sorts types with nontrivial default constructor") {
+TEST_CASE("quadsort sorts types with a nontrivial default constructor") {
 	std::vector<NonTrivialDefaultConstructor> list;
 	for (int i = 0; i < 100; ++i) list.push_back(NonTrivialDefaultConstructor());
 
@@ -58,6 +83,8 @@ struct NoDefaultConstructor {
 	bool operator<(const NoDefaultConstructor& other) const { return value < other.value; }
 	bool operator==(const NoDefaultConstructor& other) const { return value == other.value; }
 };
+
+static_assert (!std::is_default_constructible_v<NoDefaultConstructor>);
 
 TEST_CASE("crumsort sorts types without a default constructor") {
 	std::vector<NoDefaultConstructor> list;
@@ -95,6 +122,11 @@ struct MoveOnly {
 	bool operator==(const MoveOnly& other) const { return value == other.value; }
 };
 
+static_assert (!std::is_copy_constructible_v<MoveOnly>);
+static_assert (!std::is_copy_assignable_v<MoveOnly>);
+static_assert (std::is_move_constructible_v<MoveOnly>);
+static_assert (std::is_move_assignable_v<MoveOnly>);
+
 TEST_CASE("crumsort sorts move-only types") {
 	std::vector<MoveOnly> list;
 	for (int i = 0; i < 100; ++i) list.push_back(MoveOnly(RandomInt()));
@@ -107,6 +139,110 @@ TEST_CASE("crumsort sorts move-only types") {
 TEST_CASE("quadsort sorts move-only types") {
 	std::vector<MoveOnly> list;
 	for (int i = 0; i < 100; ++i) list.push_back(MoveOnly(RandomInt()));
+
+	scandum::quadsort(list.begin(), list.end());
+
+	CHECK(std::is_sorted(list.begin(), list.end()));
+}
+
+//////
+// Nontrivial copy
+//////
+
+struct NoTrivialCopy {
+	int value;
+
+	NoTrivialCopy() = default;
+	explicit NoTrivialCopy(int value) : value(value) {}
+	NoTrivialCopy(const NoTrivialCopy& other) { value = other.value; };
+	NoTrivialCopy& operator=(const NoTrivialCopy& other) { value = other.value; return *this; };
+
+	bool operator<(const NoTrivialCopy& other) const { return value < other.value; }
+	bool operator==(const NoTrivialCopy& other) const { return value == other.value; }
+};
+
+static_assert (!std::is_trivially_copy_constructible_v<NoTrivialCopy>);
+static_assert (!std::is_trivially_copy_assignable_v<NoTrivialCopy>);
+static_assert (std::is_copy_constructible_v<NoTrivialCopy>);
+static_assert (std::is_copy_assignable_v<NoTrivialCopy>);
+
+TEST_CASE("crumsort sorts types that are nontrivially copyable") {
+	std::vector<NoTrivialCopy> list;
+	for (int i = 0; i < 100; ++i) list.push_back(NoTrivialCopy(RandomInt()));
+
+	scandum::crumsort(list.begin(), list.end());
+
+	CHECK(std::is_sorted(list.begin(), list.end()));
+}
+
+TEST_CASE("quadsort sorts types that are nontrivially copyable") {
+	std::vector<NoTrivialCopy> list;
+	for (int i = 0; i < 100; ++i) list.push_back(NoTrivialCopy(RandomInt()));
+
+	scandum::quadsort(list.begin(), list.end());
+
+	CHECK(std::is_sorted(list.begin(), list.end()));
+}
+
+//////
+// Nontrivial move
+//////
+
+struct NoTrivialMove {
+	int value;
+
+	NoTrivialMove() = default;
+	explicit NoTrivialMove(int value) : value(value) {}
+	NoTrivialMove(const NoTrivialMove& other) = delete;
+	NoTrivialMove& operator=(const NoTrivialMove& other) = delete;
+	NoTrivialMove(NoTrivialMove&& other) { value = other.value; };
+	NoTrivialMove& operator=(NoTrivialMove&& other) { value = other.value; return *this; };
+
+	bool operator<(const NoTrivialMove& other) const { return value < other.value; }
+	bool operator==(const NoTrivialMove& other) const { return value == other.value; }
+};
+
+static_assert (!std::is_trivially_move_constructible_v<NoTrivialMove>);
+static_assert (!std::is_trivially_move_assignable_v<NoTrivialMove>);
+static_assert (!std::is_copy_constructible_v<NoTrivialMove>);
+static_assert (!std::is_copy_assignable_v<NoTrivialMove>);
+static_assert (std::is_move_constructible_v<NoTrivialMove>);
+static_assert (std::is_move_assignable_v<NoTrivialMove>);
+
+TEST_CASE("crumsort sorts types that are nontrivially movable") {
+	std::vector<NoTrivialCopy> list;
+	for (int i = 0; i < 100; ++i) list.push_back(NoTrivialCopy(RandomInt()));
+
+	scandum::crumsort(list.begin(), list.end());
+
+	CHECK(std::is_sorted(list.begin(), list.end()));
+}
+
+TEST_CASE("quadsort sorts types that are nontrivially movable") {
+	std::vector<NoTrivialCopy> list;
+	for (int i = 0; i < 100; ++i) list.push_back(NoTrivialCopy(RandomInt()));
+
+	scandum::quadsort(list.begin(), list.end());
+
+	CHECK(std::is_sorted(list.begin(), list.end()));
+}
+
+//////
+// Noncontiguous memory
+//////
+
+TEST_CASE("crumsort sorts types with noncontiguous memory") {
+	std::deque<int> list;
+	for (int i = 0; i < 100; ++i) list.push_back(RandomInt());
+
+	scandum::crumsort(list.begin(), list.end());
+
+	CHECK(std::is_sorted(list.begin(), list.end()));
+}
+
+TEST_CASE("quadsort sorts types with noncontiguous memory") {
+	std::deque<int> list;
+	for (int i = 0; i < 100; ++i) list.push_back(RandomInt());
 
 	scandum::quadsort(list.begin(), list.end());
 

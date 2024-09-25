@@ -654,36 +654,40 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 	{
 		if (tpl - ptl > 8)
 		{
-		ptl8_ptr: if (scandum_not_greater(cmp, *(ptl + 7), *ptr))
-		{
-			scandum_copy_range(T, ptd, ptl, 8); ptd += 8; ptl += 8;
+		ptl8_ptr:
+			if (scandum_not_greater(cmp, *(ptl + 7), *ptr))
+			{
+				scandum_copy_range(T, ptd, ptl, 8); ptd += 8; ptl += 8;
 
-			if (tpl - ptl > 8) { goto ptl8_ptr; } continue;
-		}
+				if (tpl - ptl > 8) { goto ptl8_ptr; } continue;
+			}
 
-	tpl8_tpr: if (scandum_greater(cmp, *(tpl - 7), *tpr))
-	{
-		tpd -= 7; tpl -= 7; scandum_copy_range(T, tpd--, tpl--, 8);
+		tpl8_tpr:
+			if (scandum_greater(cmp, *(tpl - 7), *tpr))
+			{
+				tpd -= 7; tpl -= 7; scandum_copy_range(T, tpd--, tpl--, 8);
 
-		if (tpl - ptl > 8) { goto tpl8_tpr; } continue;
-	}
+				if (tpl - ptl > 8) { goto tpl8_tpr; } continue;
+			}
 		}
 
 		if (tpr - ptr > 8)
 		{
-		ptl_ptr8: if (scandum_greater(cmp, *ptl, *(ptr + 7)))
-		{
-			scandum_copy_range(T, ptd, ptr, 8); ptd += 8; ptr += 8;
+		ptl_ptr8:
+			if (scandum_greater(cmp, *ptl, *(ptr + 7)))
+			{
+				scandum_copy_range(T, ptd, ptr, 8); ptd += 8; ptr += 8;
 
-			if (tpr - ptr > 8) { goto ptl_ptr8; } continue;
-		}
+				if (tpr - ptr > 8) { goto ptl_ptr8; } continue;
+			}
 
-	tpl_tpr8: if (scandum_not_greater(cmp, *tpl, *(tpr - 7)))
-	{
-		tpd -= 7; tpr -= 7; scandum_copy_range(T, tpd--, tpr--, 8);
+		tpl_tpr8:
+			if (scandum_not_greater(cmp, *tpl, *(tpr - 7)))
+			{
+				tpd -= 7; tpr -= 7; scandum_copy_range(T, tpd--, tpr--, 8);
 
-		if (tpr - ptr > 8) { goto tpl_tpr8; } continue;
-	}
+				if (tpr - ptr > 8) { goto tpl_tpr8; } continue;
+			}
 		}
 
 		if (tpd - ptd < 16)

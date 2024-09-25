@@ -12,16 +12,16 @@ file(DOWNLOAD https://raw.githubusercontent.com/timsort/cpp-TimSort/master/inclu
 FetchContent_Declare(wolfsort GIT_REPOSITORY https://github.com/scandum/wolfsort.git)
 FetchContent_MakeAvailable(wolfsort)
 
-add_executable(crumsortcpp-benchmarks
+add_executable(benchmarks
 	bench.cpp
 	scandum_sorts.h
 	scandum_sorts.c
 	${CMAKE_CURRENT_BINARY_DIR}/rhsort.c)
 
-target_include_directories(crumsortcpp-benchmarks PUBLIC
+target_include_directories(benchmarks PUBLIC
 	${CMAKE_CURRENT_BINARY_DIR}
-	${CMAKE_BINARY_DIR}/_deps/wolfsort-src/src)
+	${FETCHCONTENT_BASE_DIR}/wolfsort-src/src)
 
-target_link_libraries(crumsortcpp-benchmarks crumsortcpp)
+target_link_libraries(benchmarks crumsortcpp)
 
-set_property(TARGET crumsortcpp-benchmarks PROPERTY COMPILE_WARNING_AS_ERROR OFF)
+set_property(TARGET benchmarks PROPERTY COMPILE_WARNING_AS_ERROR OFF)

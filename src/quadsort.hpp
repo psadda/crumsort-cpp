@@ -18,8 +18,8 @@
 
 #define scandum_copy_range(T, output, input, length) \
 	{ \
-	auto it = input; \
-	std::copy(it, it + (length), output); \
+		auto it = input; \
+		std::move(it, it + (length), output); \
 	}
 
 #define scandum_copy_overlapping_range(T, output, input, length) \
@@ -31,38 +31,40 @@
 		if (in_begin == out || in_begin == in_end) { \
 			/* do nothing */ \
 		} else if (out > in_begin && out < in_end) { \
-			std::copy_backward(in_begin, in_end, out + len); \
+			std::move_backward(in_begin, in_end, out + len); \
 		} else { \
-			std::copy(in_begin, in_end, out); \
+			std::move(in_begin, in_end, out); \
 		} \
 	}
+
+#define scandum_move(x) std::move(x)
 
 // utilize branchless ternary operations in clang
 
 #if !defined __clang__
 #define scandum_head_branchless_merge(ptd, x, ptl, ptr, cmp)  \
 	x = scandum_not_greater(cmp, *ptl, *ptr);  \
-	*ptd = *ptl;  \
+	*ptd = scandum_move(*ptl);  \
 	ptl += x;  \
-	ptd[x] = *ptr;  \
+	ptd[x] = scandum_move(*ptr);  \
 	ptr += !x;  \
 	ptd++;
 #else
 #define scandum_head_branchless_merge(ptd, x, ptl, ptr, cmp)  \
-	*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? (T&)*ptl++ : (T&)*ptr++;
+	*ptd++ = scandum_move(scandum_not_greater(cmp, *ptl, *ptr) ? (T&)*ptl++ : (T&)*ptr++);
 #endif
 
 #if !defined __clang__
 #define scandum_tail_branchless_merge(tpd, y, tpl, tpr, cmp)  \
 	y = scandum_not_greater(cmp, *tpl, *tpr);  \
-	*tpd = *tpl;  \
+	*tpd = scandum_move(*tpl);  \
 	tpl -= !y;  \
 	tpd--;  \
-	tpd[y] = *tpr;  \
+	tpd[y] = scandum_move(*tpr);  \
 	tpr -= y;
 #else
 #define scandum_tail_branchless_merge(tpd, x, tpl, tpr, cmp)  \
-	*tpd-- = scandum_greater(cmp, *tpl, *tpr) ? (T&)*tpl-- : (T&)*tpr--;
+	*tpd-- = scandum_move(scandum_greater(cmp, *tpl, *tpr) ? (T&)*tpl-- : (T&)*tpr--);
 #endif
 
 // guarantee small parity merges are inlined with minimal overhead
@@ -70,45 +72,43 @@
 #define scandum_parity_merge_two(array, swap, x, ptl, ptr, pts, cmp)  \
 	ptl = array; ptr = array + 2; pts = swap;  \
 	scandum_head_branchless_merge(pts, x, ptl, ptr, cmp);  \
-	*pts = scandum_not_greater(cmp, *ptl, *ptr) ? (T&)*ptl : (T&)*ptr;  \
-  \
+	*pts = scandum_move(scandum_not_greater(cmp, *ptl, *ptr) ? (T&)*ptl : (T&)*ptr);  \
 	ptl = array + 1; ptr = array + 3; pts = swap + 3;  \
 	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
-	*pts = scandum_greater(cmp, *ptl, *ptr) ? (T&)*ptl : (T&)*ptr;
+	*pts = scandum_move(scandum_greater(cmp, *ptl, *ptr) ? (T&)*ptl : (T&)*ptr);
 
 #define scandum_parity_merge_four(array, swap, x, ptl, ptr, pts, cmp)  \
 	ptl = array + 0; ptr = array + 4; pts = swap;  \
 	scandum_head_branchless_merge(pts, x, ptl, ptr, cmp);  \
 	scandum_head_branchless_merge(pts, x, ptl, ptr, cmp);  \
 	scandum_head_branchless_merge(pts, x, ptl, ptr, cmp);  \
-	*pts = scandum_not_greater(cmp, *ptl, *ptr) ? (T&)*ptl : (T&)*ptr;  \
-  \
+	*pts = scandum_move(scandum_not_greater(cmp, *ptl, *ptr) ? (T&)*ptl : (T&)*ptr);  \
 	ptl = array + 3; ptr = array + 7; pts = swap + 7;  \
 	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
 	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
 	scandum_tail_branchless_merge(pts, x, ptl, ptr, cmp);  \
-	*pts = scandum_greater(cmp, *ptl, *ptr) ? (T&)*ptl : (T&)*ptr;
+	*pts = scandum_move(scandum_greater(cmp, *ptl, *ptr) ? (T&)*ptl : (T&)*ptr);
 
 #if !defined __clang__
 #define scandum_branchless_swap(pta, swap, x, cmp)  \
 	x = scandum_greater(cmp, *pta, *(pta + 1));  \
-	swap = pta[!x];  \
-	pta[0] = pta[x];  \
-	pta[1] = swap;
+	swap = scandum_move(pta[!x]);  \
+	pta[0] = scandum_move(pta[x]);  \
+	pta[1] = scandum_move(swap);
 #else
 #define scandum_branchless_swap(pta, swap, x, cmp)  \
 	x = 0;  \
-	swap = scandum_greater(cmp, *pta, *(pta + 1)) ? pta[x++] : pta[1];  \
-	pta[0] = pta[x];  \
-	pta[1] = swap;
+	swap = scandum_move(scandum_greater(cmp, *pta, *(pta + 1)) ? pta[x++] : pta[1]);  \
+	pta[0] = scandum_move(pta[x]);  \
+	pta[1] = scandum_move(swap);
 #endif
 
 #define scandum_swap_branchless(pta, swap, x, y, cmp)  \
 	x = scandum_greater(cmp, *pta, *(pta + 1));  \
 	y = !x;  \
-	swap = pta[y];  \
-	pta[0] = pta[x];  \
-	pta[1] = swap;
+	swap = scandum_move(pta[y]);  \
+	pta[0] = scandum_move(pta[x]);  \
+	pta[1] = scandum_move(swap);
 
 
 namespace scandum {
@@ -161,7 +161,7 @@ void parity_swap_four(Iterator array, Compare cmp)
 
 	if (scandum_greater(cmp, *pta, *(pta + 1)))
 	{
-		tmp = pta[0]; pta[0] = pta[1]; pta[1] = tmp; pta--;
+		tmp = scandum_move(pta[0]); pta[0] = scandum_move(pta[1]); pta[1] = scandum_move(tmp); pta--;
 
 		scandum_branchless_swap(pta, tmp, x, cmp); pta += 2;
 		scandum_branchless_swap(pta, tmp, x, cmp); pta--;
@@ -212,8 +212,17 @@ void parity_swap_six(Iterator array, swap_space<T>& swap, Compare cmp)
 		scandum_branchless_swap(pta, tmp, x, cmp);
 		return;
 	}
-	x = scandum_greater(cmp, *pta, *(pta + 1)); y = !x; swap[0] = pta[x]; swap[1] = pta[y]; swap[2] = pta[2]; pta += 4;
-	x = scandum_greater(cmp, *pta, *(pta + 1)); y = !x; swap[4] = pta[x]; swap[5] = pta[y]; swap[3] = pta[-1];
+	x = scandum_greater(cmp, *pta, *(pta + 1));
+	y = !x;
+	swap[0] = scandum_move(pta[x]);
+	swap[1] = scandum_move(pta[y]);
+	swap[2] = scandum_move(pta[2]);
+	pta += 4;
+	x = scandum_greater(cmp, *pta, *(pta + 1));
+	y = !x;
+	swap[4] = scandum_move(pta[x]);
+	swap[5] = scandum_move(pta[y]);
+	swap[3] = scandum_move(pta[-1]);
 
 	pta = array; ptl = swap.begin(); ptr = swap.begin() + 3;
 
@@ -225,7 +234,7 @@ void parity_swap_six(Iterator array, swap_space<T>& swap, Compare cmp)
 
 	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
 	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
-	*pta = scandum_greater(cmp, *ptl, *ptr) ? *ptl : *ptr;
+	*pta = scandum_move(scandum_greater(cmp, *ptl, *ptr) ? *ptl : *ptr);
 }
 
 template<typename T, typename Iterator, typename Compare>
@@ -248,9 +257,18 @@ void parity_swap_seven(Iterator array, swap_space<T>& swap, Compare cmp)
 
 	scandum_branchless_swap(pta, tmp, x, cmp); pta = array;
 
-	x = scandum_greater(cmp, *pta, *(pta + 1)); swap[0] = pta[x]; swap[1] = pta[!x]; swap[2] = pta[2]; pta += 3;
-	x = scandum_greater(cmp, *pta, *(pta + 1)); swap[3] = pta[x]; swap[4] = pta[!x]; pta += 2;
-	x = scandum_greater(cmp, *pta, *(pta + 1)); swap[5] = pta[x]; swap[6] = pta[!x];
+	x = scandum_greater(cmp, *pta, *(pta + 1));
+	swap[0] = scandum_move(pta[x]);
+	swap[1] = scandum_move(pta[!x]);
+	swap[2] = scandum_move(pta[2]);
+	pta += 3;
+	x = scandum_greater(cmp, *pta, *(pta + 1));
+	swap[3] = scandum_move(pta[x]);
+	swap[4] = scandum_move(pta[!x]);
+	pta += 2;
+	x = scandum_greater(cmp, *pta, *(pta + 1));
+	swap[5] = scandum_move(pta[x]);
+	swap[6] = scandum_move(pta[!x]);
 
 	pta = array; ptl = swap.begin(); ptr = swap.begin() + 3;
 
@@ -263,7 +281,7 @@ void parity_swap_seven(Iterator array, swap_space<T>& swap, Compare cmp)
 	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
 	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
 	scandum_tail_branchless_merge(pta, y, ptl, ptr, cmp);
-	*pta = scandum_greater(cmp, *ptl, *ptr) ? *ptl : *ptr;
+	*pta = scandum_move(scandum_greater(cmp, *ptl, *ptr) ? *ptl : *ptr);
 }
 
 template<typename T, typename Iterator, typename Compare>
@@ -317,9 +335,9 @@ void parity_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compar
 
 	if (left < right)
 	{
-		*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
+		*ptd++ = scandum_move(scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++);
 	}
-	*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
+	*ptd++ = scandum_move(scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++);
 
 #if !defined cmp && !defined __clang__ // cache limit workaround for gcc
 	if (left > QUAD_CACHE)
@@ -339,7 +357,7 @@ void parity_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compar
 			scandum_tail_branchless_merge(tpd, y, tpl, tpr, cmp);
 		}
 	}
-	*tpd = scandum_greater(cmp, *tpl, *tpr) ? *tpl : *tpr;
+	*tpd = scandum_move(scandum_greater(cmp, *tpl, *tpr) ? *tpl : *tpr);
 }
 
 template<typename T, typename Iterator, typename Compare>
@@ -390,15 +408,15 @@ void quad_reversal(Iterator pta, Iterator ptz)
 
 	if (loop % 2 == 0)
 	{
-		tmp2 = *ptb; *ptb-- = *pty; *pty++ = tmp2; loop--;
+		tmp2 = scandum_move(*ptb); *ptb-- = scandum_move(*pty); *pty++ = scandum_move(tmp2); loop--;
 	}
 
 	loop /= 2;
 
 	do
 	{
-		tmp1 = *pta; *pta++ = *ptz; *ptz-- = tmp1;
-		tmp2 = *ptb; *ptb-- = *pty; *pty++ = tmp2;
+		tmp1 = scandum_move(*pta); *pta++ = scandum_move(*ptz); *ptz-- = scandum_move(tmp1);
+		tmp2 = scandum_move(*ptb); *ptb-- = scandum_move(*pty); *pty++ = scandum_move(tmp2);
 	} while (loop--);
 }
 
@@ -484,10 +502,10 @@ size_t quad_swap(Iterator array, size_t nmemb, Compare cmp)
 
 			default:
 			not_ordered:
-				x = !v1; tmp = pta[x]; pta[0] = pta[v1]; pta[1] = tmp; pta += 2;
-				x = !v2; tmp = pta[x]; pta[0] = pta[v2]; pta[1] = tmp; pta += 2;
-				x = !v3; tmp = pta[x]; pta[0] = pta[v3]; pta[1] = tmp; pta += 2;
-				x = !v4; tmp = pta[x]; pta[0] = pta[v4]; pta[1] = tmp; pta -= 6;
+				x = !v1; tmp = scandum_move(pta[x]); pta[0] = scandum_move(pta[v1]); pta[1] = scandum_move(tmp); pta += 2;
+				x = !v2; tmp = scandum_move(pta[x]); pta[0] = scandum_move(pta[v2]); pta[1] = scandum_move(tmp); pta += 2;
+				x = !v3; tmp = scandum_move(pta[x]); pta[0] = scandum_move(pta[v3]); pta[1] = scandum_move(tmp); pta += 2;
+				x = !v4; tmp = scandum_move(pta[x]); pta[0] = scandum_move(pta[v4]); pta[1] = scandum_move(tmp); pta -= 6;
 
 				quad_swap_merge<T>(pta, swap, cmp);
 			}
@@ -549,10 +567,10 @@ size_t quad_swap(Iterator array, size_t nmemb, Compare cmp)
 					goto reversed;
 				}
 
-				x = !v1; tmp = pta[v1]; pta[0] = pta[x]; pta[1] = tmp; pta += 2;
-				x = !v2; tmp = pta[v2]; pta[0] = pta[x]; pta[1] = tmp; pta += 2;
-				x = !v3; tmp = pta[v3]; pta[0] = pta[x]; pta[1] = tmp; pta += 2;
-				x = !v4; tmp = pta[v4]; pta[0] = pta[x]; pta[1] = tmp; pta -= 6;
+				x = !v1; tmp = scandum_move(pta[v1]); pta[0] = scandum_move(pta[x]); pta[1] = scandum_move(tmp); pta += 2;
+				x = !v2; tmp = scandum_move(pta[v2]); pta[0] = scandum_move(pta[x]); pta[1] = scandum_move(tmp); pta += 2;
+				x = !v3; tmp = scandum_move(pta[v3]); pta[0] = scandum_move(pta[x]); pta[1] = scandum_move(tmp); pta += 2;
+				x = !v4; tmp = scandum_move(pta[v4]); pta[0] = scandum_move(pta[x]); pta[1] = scandum_move(tmp); pta -= 6;
 
 				if (scandum_greater(cmp, *(pta + 1), *(pta + 2)) || scandum_greater(cmp, *(pta + 3), *(pta + 4)) || scandum_greater(cmp, *(pta + 5), *(pta + 6)))
 				{
@@ -695,15 +713,15 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 
 	while (ptl <= tpl && ptr <= tpr)
 	{
-		*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
+		*ptd++ = scandum_move(scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++);
 	}
 	while (ptl <= tpl)
 	{
-		*ptd++ = *ptl++;
+		*ptd++ = scandum_move(*ptl++);
 	}
 	while (ptr <= tpr)
 	{
-		*ptd++ = *ptr++;
+		*ptd++ = scandum_move(*ptr++);
 	}
 }
 
@@ -796,49 +814,56 @@ void partial_forward_merge(Iterator array, swap_space<T>& swap, size_t nmemb, si
 
 	while (ptl < tpl - 1 && ptr < tpr - 1)
 	{
-	ptr2: if (scandum_greater(cmp, *ptl, *(ptr + 1)))
-	{
-		*array++ = *ptr++; *array++ = *ptr++;
+	ptr2:
+		if (scandum_greater(cmp, *ptl, *(ptr + 1)))
+		{
+			*array++ = scandum_move(*ptr++); *array++ = scandum_move(*ptr++);
 
-		if (ptr < tpr - 1) { goto ptr2; } break;
-	}
-	if (scandum_not_greater(cmp, *(ptl + 1), *ptr))
-	{
-		*array++ = *ptl++; *array++ = *ptl++;
+			if (ptr < tpr - 1) { goto ptr2; } break;
+		}
+		if (scandum_not_greater(cmp, *(ptl + 1), *ptr))
+		{
+			*array++ = scandum_move(*ptl++); *array++ = scandum_move(*ptl++);
 
-		if (ptl < tpl - 1) { goto ptl2; } break;
-	}
+			if (ptl < tpl - 1) { goto ptl2; } break;
+		}
 
-	goto cross_swap;
+		goto cross_swap;
 
-ptl2: if (scandum_not_greater(cmp, *(ptl + 1), *ptr))
-{
-	*array++ = *ptl++; *array++ = *ptl++;
+	ptl2:
+		if (scandum_not_greater(cmp, *(ptl + 1), *ptr))
+		{
+			*array++ = scandum_move(*ptl++); *array++ = scandum_move(*ptl++);
 
-	if (ptl < tpl - 1) { goto ptl2; } break;
-}
+			if (ptl < tpl - 1) { goto ptl2; } break;
+		}
 
-if (scandum_greater(cmp, *ptl, *(ptr + 1)))
-{
-	*array++ = *ptr++; *array++ = *ptr++;
+		if (scandum_greater(cmp, *ptl, *(ptr + 1)))
+		{
+			*array++ = scandum_move(*ptr++); *array++ = scandum_move(*ptr++);
 
-	if (ptr < tpr - 1) { goto ptr2; } break;
-}
+			if (ptr < tpr - 1) { goto ptr2; } break;
+		}
 
-cross_swap:
+	cross_swap:
 
-x = scandum_not_greater(cmp, *ptl, *ptr); array[x] = *ptr; ptr += 1; array[!x] = *ptl; ptl += 1; array += 2;
-scandum_head_branchless_merge(array, x, ptl, ptr, cmp);
+		x = scandum_not_greater(cmp, *ptl, *ptr);
+		array[x] = scandum_move(*ptr);
+		ptr += 1;
+		array[!x] = scandum_move(*ptl);
+		ptl += 1;
+		array += 2;
+		scandum_head_branchless_merge(array, x, ptl, ptr, cmp);
 	}
 
 	while (ptl <= tpl && ptr <= tpr)
 	{
-		*array++ = scandum_not_greater(cmp, *ptl, *ptr) ? (T&)*ptl++ : (T&)*ptr++;
+		*array++ = scandum_move(scandum_not_greater(cmp, *ptl, *ptr) ? (T&)*ptl++ : (T&)*ptr++);
 	}
 
 	while (ptl <= tpl)
 	{
-		*array++ = *ptl++;
+		*array++ = scandum_move(*ptl++);
 	}
 }
 
@@ -881,14 +906,14 @@ void partial_backward_merge(Iterator array, swap_space<T>& swap, size_t nmemb, s
 	{
 	tpl_tpr16: if (scandum_not_greater(cmp, *tpl, *(tpr - 15)))
 	{
-		loop = 16; do *tpa-- = *tpr--; while (--loop);
+		loop = 16; do *tpa-- = scandum_move(*tpr--); while (--loop);
 
 		if (tpr > swap.begin() + 16) { goto tpl_tpr16; } break;
 	}
 
 tpl16_tpr: if (scandum_greater(cmp, *(tpl - 15), *tpr))
 {
-	loop = 16; do *tpa-- = *tpl--; while (--loop);
+	loop = 16; do *tpa-- = scandum_move(*tpl--); while (--loop);
 
 	if (tpl > array + 16) { goto tpl16_tpr; } break;
 }
@@ -896,15 +921,21 @@ loop = 8; do
 {
 	if (scandum_not_greater(cmp, *tpl, *(tpr - 1)))
 	{
-		*tpa-- = *tpr--; *tpa-- = *tpr--;
+		*tpa-- = scandum_move(*tpr--); *tpa-- = scandum_move(*tpr--);
 	}
 	else if (scandum_greater(cmp, *(tpl - 1), *tpr))
 	{
-		*tpa-- = *tpl--; *tpa-- = *tpl--;
+		*tpa-- = scandum_move(*tpl--); *tpa-- = scandum_move(*tpl--);
 	}
 	else
 	{
-		x = scandum_not_greater(cmp, *tpl, *tpr); tpa--; tpa[x] = *tpr; tpr -= 1; tpa[!x] = *tpl; tpl -= 1; tpa--;
+		x = scandum_not_greater(cmp, *tpl, *tpr);
+		tpa--;
+		tpa[x] = scandum_move(*tpr);
+		tpr -= 1;
+		tpa[!x] = scandum_move(*tpl);
+		tpl -= 1;
+		tpa--;
 		scandum_tail_branchless_merge(tpa, x, tpl, tpr, cmp);
 	}
 } while (--loop);
@@ -914,14 +945,14 @@ loop = 8; do
 	{
 	tpr2: if (scandum_not_greater(cmp, *tpl, *(tpr - 1)))
 	{
-		*tpa-- = *tpr--; *tpa-- = *tpr--;
+		*tpa-- = scandum_move(*tpr--); *tpa-- = scandum_move(*tpr--);
 
 		if (tpr > swap.begin() + 1) { goto tpr2; } break;
 	}
 
 	if (scandum_greater(cmp, *(tpl - 1), *tpr))
 	{
-		*tpa-- = *tpl--; *tpa-- = *tpl--;
+		*tpa-- = scandum_move(*tpl--); *tpa-- = scandum_move(*tpl--);
 
 		if (tpl > array + 1) { goto tpl2; } break;
 	}
@@ -929,31 +960,37 @@ loop = 8; do
 
 tpl2: if (scandum_greater(cmp, *(tpl - 1), *tpr))
 {
-	*tpa-- = *tpl--; *tpa-- = *tpl--;
+	*tpa-- = scandum_move(*tpl--); *tpa-- = scandum_move(*tpl--);
 
 	if (tpl > array + 1) { goto tpl2; } break;
 }
 
 if (scandum_not_greater(cmp, *tpl, *(tpr - 1)))
 {
-	*tpa-- = *tpr--; *tpa-- = *tpr--;
+	*tpa-- = scandum_move(*tpr--); *tpa-- = scandum_move(*tpr--);
 
 	if (tpr > swap.begin() + 1) { goto tpr2; } break;
 }
 cross_swap:
 
-x = scandum_not_greater(cmp, *tpl, *tpr); tpa--; tpa[x] = *tpr; tpr -= 1; tpa[!x] = *tpl; tpl -= 1; tpa--;
+x = scandum_not_greater(cmp, *tpl, *tpr);
+tpa--;
+tpa[x] = scandum_move(*tpr);
+tpr -= 1;
+tpa[!x] = scandum_move(*tpl);
+tpl -= 1;
+tpa--;
 scandum_tail_branchless_merge(tpa, x, tpl, tpr, cmp);
 	}
 
 	while (tpr >= swap.begin() && tpl >= array)
 	{
-		*tpa-- = scandum_greater(cmp, *tpl, *tpr) ? (T&)*tpl-- : (T&)*tpr--;
+		*tpa-- = scandum_move(scandum_greater(cmp, *tpl, *tpr) ? (T&)*tpl-- : (T&)*tpr--);
 	}
 
 	while (tpr >= swap.begin())
 	{
-		*tpa-- = *tpr--;
+		*tpa-- = scandum_move(*tpr--);
 	}
 }
 
@@ -993,7 +1030,7 @@ void trinity_rotation(Iterator array, swap_space<T>& swap, size_t nmemb, size_t 
 
 				while (left--)
 				{
-					*--ptc = *--ptd; *ptd = *--ptb;
+					*--ptc = scandum_move(*--ptd); *ptd = scandum_move(*--ptb);
 				}
 				scandum_copy_range(T, pta, swap.begin(), bridge);
 			}
@@ -1006,21 +1043,30 @@ void trinity_rotation(Iterator array, swap_space<T>& swap, size_t nmemb, size_t 
 
 				while (bridge--)
 				{
-					temp = *--ptb; *ptb = *pta; *pta++ = *ptc; *ptc++ = *--ptd; *ptd = temp;
+					temp = scandum_move(*--ptb);
+					*ptb = scandum_move(*pta);
+					*pta++ = scandum_move(*ptc);
+					*ptc++ = scandum_move(*--ptd);
+					*ptd = scandum_move(temp);
 				}
 
 				bridge = (ptd - ptc) / 2;
 
 				while (bridge--)
 				{
-					temp = *ptc; *ptc++ = *--ptd; *ptd = *pta; *pta++ = temp;
+					temp = scandum_move(*ptc);
+					*ptc++ = scandum_move(*--ptd);
+					*ptd = scandum_move(*pta);
+					*pta++ = scandum_move(temp);
 				}
 
 				bridge = (ptd - pta) / 2;
 
 				while (bridge--)
 				{
-					temp = *pta; *pta++ = *--ptd; *ptd = temp;
+					temp = scandum_move(*pta);
+					*pta++ = scandum_move(*--ptd);
+					*ptd = scandum_move(temp);
 				}
 			}
 		}
@@ -1051,7 +1097,7 @@ void trinity_rotation(Iterator array, swap_space<T>& swap, size_t nmemb, size_t 
 
 				while (right--)
 				{
-					*ptc++ = *pta; *pta++ = *ptb++;
+					*ptc++ = scandum_move(*pta); *pta++ = scandum_move(*ptb++);
 				}
 				scandum_copy_range(T, ptd - bridge, swap.begin(), bridge);
 			}
@@ -1064,21 +1110,30 @@ void trinity_rotation(Iterator array, swap_space<T>& swap, size_t nmemb, size_t 
 
 				while (bridge--)
 				{
-					temp = *--ptb; *ptb = *pta; *pta++ = *ptc; *ptc++ = *--ptd; *ptd = temp;
+					temp = scandum_move(*--ptb);
+					*ptb = scandum_move(*pta);
+					*pta++ = scandum_move(*ptc);
+					*ptc++ = scandum_move(*--ptd);
+					*ptd = scandum_move(temp);
 				}
 
 				bridge = (ptb - pta) / 2;
 
 				while (bridge--)
 				{
-					temp = *--ptb; *ptb = *pta; *pta++ = *--ptd; *ptd = temp;
+					temp = scandum_move(*--ptb);
+					*ptb = scandum_move(*pta);
+					*pta++ = scandum_move(*--ptd);
+					*ptd = scandum_move(temp);
 				}
 
 				bridge = (ptd - pta) / 2;
 
 				while (bridge--)
 				{
-					temp = *pta; *pta++ = *--ptd; *ptd = temp;
+					temp = scandum_move(*pta);
+					*pta++ = scandum_move(*--ptd);
+					*ptd = scandum_move(temp);
 				}
 			}
 		}
@@ -1092,7 +1147,9 @@ void trinity_rotation(Iterator array, swap_space<T>& swap, size_t nmemb, size_t 
 
 		while (left--)
 		{
-			temp = *pta; *pta++ = *ptb; *ptb++ = temp;
+			temp = scandum_move(*pta);
+			*pta++ = scandum_move(*ptb);
+			*ptb++ = scandum_move(temp);
 		}
 	}
 }
@@ -1280,11 +1337,12 @@ void quadsort(Iterator begin, Iterator end)
 
 #undef scandum_greater
 #undef scandum_not_greater
+#undef scandum_branchless_swap
+#undef scandum_swap_branchless
+#undef scandum_move
 #undef scandum_head_branchless_merge
 #undef scandum_tail_branchless_merge
 #undef scandum_parity_merge_two
 #undef scandum_parity_merge_four
-#undef scandum_branchless_swap
-#undef scandum_swap_branchless
 
 #endif

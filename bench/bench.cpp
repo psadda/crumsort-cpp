@@ -142,15 +142,12 @@ NO_INLINE int cmp_double(const void * a, const void * b)
 
 	COMPARISON_PP;
 
-	return (fa > fb) - (fa < fb);
-
-/*	if (isnan(fa) || isnan(fb))
+	if (isnan(fa) || isnan(fb))
 	{
 		return isnan(fa) - isnan(fb);
 	}
 
 	return (fa > fb);
-*/
 }
 
 // pointer comparison functions
@@ -188,6 +185,11 @@ NO_INLINE int cmp_double_ptr(const void * a, const void * b)
 	const double *fb = *(const double **) b;
 
 	COMPARISON_PP;
+
+	if (isnan(*fa) || isnan(*fb))
+	{
+		return isnan(*fa) - isnan(*fb);
+	}
 
 	return (*fa > *fb) - (*fa < *fb);
 }
@@ -996,11 +998,6 @@ int main(int argc, char **argv)
 	{
 		test_sort(da_array, dr_array, dv_array, max, max, samples, repetitions, qsort, sorts[cnt], "random order", sizeof(double), cmp_double);
 	}
-#ifndef cmp
-#ifdef QUADSORT_H
-	test_sort(da_array, dr_array, dv_array, max, max, samples, repetitions, qsort, "s_quadsort", "random order", sizeof(double), cmp_double_ptr);
-#endif
-#endif
 	free(da_array);
 	free(dr_array);
 	free(dv_array);

@@ -5,7 +5,6 @@
 
 #include <algorithm>   // for std::copy and std::copy_backward
 #include <cassert>
-#include <cstring>     // for std::memcpy, std::memmove, std::memset
 #include <optional>
 #include <type_traits>
 #include <vector>
@@ -18,32 +17,24 @@
 // universal copy functions to handle both trivially and nontrivially copyable types
 
 #define scandum_copy_range(T, output, input, length) \
-	if constexpr (std::is_trivially_copyable_v<T> && \
-		std::is_same_v<decltype(input), T*> && \
-		std::is_same_v<decltype(output), T*>) \
 	{ \
-		std::memcpy(output, input, (length) * sizeof(T)); \
-	} \
-	else \
-	{ \
-		auto it = input; \
-		std::copy(it, it + (length), output); \
+	auto it = input; \
+	std::copy(it, it + (length), output); \
 	}
 
 #define scandum_copy_overlapping_range(T, output, input, length) \
-	if constexpr (std::is_trivially_copyable_v<T> && \
-		std::is_same_v<decltype(input), T*> && \
-		std::is_same_v<decltype(output), T*>) \
 	{ \
-		std::memmove(output, input, (length) * sizeof(T)); \
-	} \
-	else \
-	{ \
+		auto len = length; \
 		auto in_begin = input; \
-		auto in_end = in_begin + (length); \
+		auto in_end = in_begin + len; \
 		auto out = output; \
-		assert(out < in_begin || out > in_end); \
-		std::copy_backward(in_begin, in_end, out); \
+		if (in_begin == out || in_begin == in_end) { \
+			/* do nothing */ \
+		} else if (out > in_begin && out < in_end) { \
+			std::copy_backward(in_begin, in_end, out + len); \
+		} else { \
+			std::copy(in_begin, in_end, out); \
+		} \
 	}
 
 // utilize branchless ternary operations in clang

@@ -1,6 +1,8 @@
 Crumsort and Quadsort in C++
 ============================
 
+![build status](https://github.com/psadda/crumsort-cpp/actions/workflows/test.yaml/badge.svg)
+
 This is a C99 to C++17 port of Igor van den Hoven's crumsort and quadsort.
 
 Porting crumsort and quadsort to C++ is not as trivial as one might expect. The original crumsort and quadsort have many C-isms that don't map well to modern C++:

@@ -439,6 +439,9 @@ void quad_swap_merge(Iterator array, swap_space<T>& swap, Compare cmp)
 }
 
 template<typename T, typename Iterator, typename Compare>
+void partial_backward_merge(Iterator array, swap_space<T>& swap, size_t nmemb, size_t block, Compare cmp);
+
+template<typename T, typename Iterator, typename Compare>
 void tail_merge(Iterator array, swap_space<T>& swap, size_t nmemb, size_t block, Compare cmp)
 {
 	Iterator pta, pte;

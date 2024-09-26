@@ -238,6 +238,7 @@ uint64_t utime()
 
 	// Convert the result to milliseconds
 	result64 /= 1'000'000;
+	return result64;
 #endif
 }
 
@@ -295,7 +296,6 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 
 	for (sam = 0 ; sam < samples ; sam++)
 	{
-		total = average_comp = 0;
 		max = minimum;
 
 		start = utime();
@@ -467,7 +467,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 
 			if (cmp_double_ptr(&pptda[cnt - 1], &pptda[cnt]) > 0)
 			{
-				printf("%17s: not properly sorted at index %d. (%Lf vs %Lf\n", name, cnt, *pptda[cnt - 1], *pptda[cnt]);
+				printf("%17s: not properly sorted at index %d. (%f vs %f\n", name, cnt, *pptda[cnt - 1], *pptda[cnt]);
 				break;
 			}
 		}
@@ -515,7 +515,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 		{
 			if (cmp_double(&ptda[cnt - 1], &ptda[cnt]) > 0)
 			{
-				printf("%17s: not properly sorted at index %d. (%Lf vs %Lf\n", name, cnt, ptda[cnt - 1], ptda[cnt]);
+				printf("%17s: not properly sorted at index %d. (%f vs %f\n", name, cnt, ptda[cnt - 1], ptda[cnt]);
 				break;
 			}
 		}
@@ -568,7 +568,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 		{
 			if (ptda[cnt] != ptdv[cnt])
 			{
-				printf("         validate: array[%d] != valid[%d]. (%Lf vs %Lf\n", cnt, cnt, ptda[cnt], ptdv[cnt]);
+				printf("         validate: array[%d] != valid[%d]. (%f vs %f\n", cnt, cnt, ptda[cnt], ptdv[cnt]);
 				break;
 			}
 		}
@@ -826,7 +826,7 @@ int main(int argc, char **argv)
 
 	seed = seed ? seed : time(NULL);
 
-	printf("Info: int = %lu, long long = %lu, double = %lu\n\n", sizeof(int) * 8, sizeof(long long) * 8, sizeof(double) * 8);
+	printf("Info: int = %zu, long long = %zu, double = %zu\n\n", sizeof(int) * 8, sizeof(long long) * 8, sizeof(double) * 8);
 
 	printf("Benchmark: array size: %d, samples: %d, repetitions: %d, seed: %d\n\n", max, samples, repetitions, seed);
 
@@ -844,9 +844,9 @@ int main(int argc, char **argv)
 	// C string
 
 	{
-		char **sa_array = (char **) malloc(max * sizeof(char **));
-		char **sr_array = (char **) malloc(mem * sizeof(char **));
-		char **sv_array = (char **) malloc(max * sizeof(char **));
+		char **sa_array = (char **) malloc(max * sizeof(char *));
+		char **sr_array = (char **) malloc(mem * sizeof(char *));
+		char **sv_array = (char **) malloc(max * sizeof(char *));
 
 		char *buffer = (char *) malloc(mem * 16);
 
@@ -859,12 +859,6 @@ int main(int argc, char **argv)
 			sr_array[cnt] = buffer + cnt * 16;
 		}
 
-		for (cnt = 0 ; cnt < mem ; cnt++)
-		{
-			char *pt1 = sr_array[cnt];
-			char *pt2 = sr_array[rand() % mem];
-			char *pt3 = pt1; pt1 = pt2; pt2 = pt3;
-		}
 		run_test(sa_array, sr_array, sv_array, max, max, samples, repetitions, 0, "random string", sizeof(char **), cmp_str);
 
 		free(sa_array);
@@ -886,6 +880,11 @@ int main(int argc, char **argv)
 		if (da_array == NULL || dr_array == NULL || dv_array == NULL)
 		{
 			printf("main(%d,%d,%d): malloc: %s\n", max, samples, repetitions, strerror(errno));
+
+			free(da_array);
+			free(dr_array);
+			free(dv_array);
+			free(buffer);
 
 			return 0;
 		}
@@ -920,6 +919,11 @@ int main(int argc, char **argv)
 		if (la_array == NULL || lr_array == NULL || lv_array == NULL)
 		{
 			printf("main(%d,%d,%d): malloc: %s\n", max, samples, repetitions, strerror(errno));
+
+			free(la_array);
+			free(lr_array);
+			free(lv_array);
+			free(buffer);
 
 			return 0;
 		}
@@ -956,6 +960,11 @@ int main(int argc, char **argv)
 		{
 			printf("main(%d,%d,%d): malloc: %s\n", max, samples, repetitions, strerror(errno));
 
+			free(la_array);
+			free(lr_array);
+			free(lv_array);
+			free(buffer);
+
 			return 0;
 		}
 
@@ -989,6 +998,10 @@ int main(int argc, char **argv)
 	if (da_array == NULL || dr_array == NULL || dv_array == NULL)
 	{
 		printf("main(%d,%d,%d): malloc: %s\n", max, samples, repetitions, strerror(errno));
+
+		free(da_array);
+		free(dr_array);
+		free(dv_array);
 
 		return 0;
 	}

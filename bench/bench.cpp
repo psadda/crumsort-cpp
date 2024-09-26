@@ -1,17 +1,3 @@
-/*
-	To compile use either:
-
-	gcc -O3 bench.c
-
-	or
-
-	clang -O3 bench.c
-
-	or
-
-	g++ -O3 bench.c
-*/
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -28,8 +14,6 @@
 #else
 #	include <time.h>       // for clock_getres and clock_gettime
 #endif
-
-//#define cmp(a,b) (*(a) > *(b)) // uncomment for faster primitive comparisons
 
 const char *sorts[] = {
 	"*",
@@ -74,8 +58,6 @@ extern "C" void rhsort32(int* array, size_t n);
 
 #include <algorithm>
 
-//typedef int CMPFUNC (const void *a, const void *b);
-
 typedef void SRTFUNC(void *array, size_t nmemb, size_t size, CMPFUNC *cmpf);
 
 
@@ -95,13 +77,6 @@ NO_INLINE int cmp_int(const void * a, const void * b)
 	COMPARISON_PP;
 
 	return *(int *) a - *(int *) b;
-
-//	const int l = *(const int *)a;
-//	const int r = *(const int *)b;
-
-//	return l - r;
-//	return l > r;
-//	return (l > r) - (l < r);
 }
 
 NO_INLINE int cmp_rev(const void * a, const void * b)
@@ -132,7 +107,6 @@ NO_INLINE int cmp_long(const void * a, const void * b)
 	COMPARISON_PP;
 
 	return (fa > fb) - (fa < fb);
-//	return (fa > fb);
 }
 
 NO_INLINE int cmp_float(const void * a, const void * b)
@@ -224,20 +198,18 @@ uint64_t utime()
 #ifdef _WIN32
 	LARGE_INTEGER result;
 	QueryPerformanceCounter(&result);
-	uint64_t result64 = static_cast<uint64_t>(result.QuadPart) * 1000;
+	uint64_t result64 = static_cast<uint64_t>(result.QuadPart) * 1'000'000'000;
 	return result64 / CLOCK_FREQUENCY;
 #else
 	struct timespec ts;
 	clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 
-	// Convert the seconds part of the time to milliseconds
+	// Convert the seconds part of the time to nanoseconds
 	uint64_t result64 = static_cast<uint64_t>(ts.tv_sec) * 1'000'000'000;
 
 	// Add the nanoseconds part
 	result64 += static_cast<uint64_t>(ts.tv_nsec);
 
-	// Convert the result to milliseconds
-	result64 /= 1'000'000;
 	return result64;
 #endif
 }
@@ -433,16 +405,16 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 	{
 		if (repetitions <= 1)
 		{
-			printf("|%10s |%9d | %4d |%9f |%9f |%10d | %7d | %16s |\e[0m\n", name, maximum, (int) size * 8, best / 1000000.0, average_time / 1000000.0, (int) comparisons, samples, desc);
+			printf("|%10s |%9d | %4d | %8.1f | %8.1f |%10d | %7d | %16s |\e[0m\n", name, maximum, (int) size * 8, best / double(maximum), average_time / double(maximum), (int)comparisons, samples, desc);
 		}
 		else
 		{
-			printf("|%10s |%9d | %4d |%9f |%9f |%10.1f | %7d | %16s |\e[0m\n", name, maximum, (int) size * 8, best / 1000000.0, average_time / 1000000.0, (float) average_comp / repetitions, samples, desc);
+			printf("|%10s |%9d | %4d | %8.1f | %8.1f |%10.1f | %7d | %16s |\e[0m\n", name, maximum, (int) size * 8, best / double(maximum), average_time / double(maximum), (float)average_comp / repetitions, samples, desc);
 		}
 	}
 	else
 	{
-		printf("|%10s | %8d | %4d | %f | %f | %9d | %7d | %16s |\e[0m\n", name, maximum, (int) size * 8, best / 1000000.0, average_time / 1000000.0, repetitions, samples, desc);
+		printf("|%10s | %8d | %4d | %f | %f | %9d | %7d | %16s |\e[0m\n", name, maximum, (int) size * 8, best / double(maximum), average_time / double(maximum), repetitions, samples, desc);
 	}
 
 	if (minimum != maximum || cmpf == cmp_stable)
@@ -497,10 +469,6 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 			{
 				printf("%17s: not properly sorted at index %d. (%d vs %d\n", name, cnt, pta[cnt - 1], pta[cnt]);
 				break;
-			}
-			if (pta[cnt - 1] == pta[cnt])
-			{
-//				printf("%17s: Found a repeat value at index %d. (%d)\n", name, cnt, pta[cnt]);
 			}
 		}
 		else if (size == sizeof(long long))

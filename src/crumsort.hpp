@@ -556,6 +556,17 @@ void crumsort_swap(Iterator array, swap_space<T>& swap, size_t nmemb, Compare cm
 template<typename Iterator, typename Compare>
 void crumsort(Iterator begin, const Iterator end, Compare cmp, size_t max_swap_size = 512)
 {
+	static_assert (
+#if __cplusplus >= 202002L
+		std::random_access_iterator<Iterator>,
+#else
+		std::is_convertible_v<typename std::iterator_traits<Iterator>::iterator_category, std::random_access_iterator_tag>,
+#endif
+		"type 'Iterator' must be a random access iterator"
+	);
+
+	assert(max_swap_size > 0);
+
 	typedef std::remove_reference_t<decltype(*begin)> T;
 
 	size_t nmemb = static_cast<size_t>(end - begin);

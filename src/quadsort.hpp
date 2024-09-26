@@ -1322,6 +1322,15 @@ void quadsort_swap(Iterator array, swap_space<T>& swap, size_t nmemb, Compare cm
 template<typename Iterator, typename Compare>
 void quadsort(Iterator begin, Iterator end, Compare cmp)
 {
+	static_assert (
+#if __cplusplus >= 202002L
+		std::random_access_iterator<Iterator>,
+#else
+		std::is_convertible_v<typename std::iterator_traits<Iterator>::iterator_category, std::random_access_iterator_tag>,
+#endif
+		"type 'Iterator' must be a random access iterator"
+	);
+
 	typedef std::remove_reference_t<decltype(*begin)> T;
 
 	size_t nmemb = std::distance(begin, end);

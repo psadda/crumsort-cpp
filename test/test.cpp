@@ -9,10 +9,32 @@
 #include <deque>
 #include <vector>
 
-int RandomInt() {
+int RandomInt(int max_value = 1000) {
 	// This is **not** the textbook solution to getting a random integer, but we don't really care
 	// about the exact statistical distribution here; we just need numbers that aren't ordered.
-	return std::rand() % 1000;
+	return std::rand() % max_value;
+}
+
+//////
+// Simple sort
+//////
+
+TEST_CASE("crumsort correctly sorts random integers") {
+	std::vector<int> list;
+	for (int i = 0; i < 100; ++i) list.push_back(RandomInt());
+
+	scandum::crumsort(list.begin(), list.end());
+
+	CHECK(std::is_sorted(list.begin(), list.end()));
+}
+
+TEST_CASE("quadsort correctly sorts random integers") {
+	std::vector<int> list;
+	for (int i = 0; i < 100; ++i) list.push_back(RandomInt());
+
+	scandum::quadsort(list.begin(), list.end());
+
+	CHECK(std::is_sorted(list.begin(), list.end()));
 }
 
 //////
@@ -35,6 +57,31 @@ TEST_CASE("quadsort correctly sorts with a custom predicate") {
 	scandum::quadsort(list.begin(), list.end(), std::greater<int>());
 
 	CHECK(std::is_sorted(list.begin(), list.end(), std::greater<int>()));
+}
+
+//////
+// Stable sort
+//////
+
+struct OrderedInt {
+	int value, order;
+	bool operator<(const OrderedInt& other) const { return value < other.value; }
+	bool operator==(const OrderedInt& other) const { return value == other.value; }
+};
+
+TEST_CASE("quadsort is stable") {
+	constexpr int MAX_VALUE = 10; // Pick a small value so we're guaranteed to have equal elements
+
+	std::vector<OrderedInt> list;
+	for (int i = 0; i < 100; ++i) list.push_back({ RandomInt(MAX_VALUE), i });
+
+	scandum::quadsort(list.begin(), list.end());
+
+	CHECK(std::is_sorted(list.begin(), list.end()));
+
+	CHECK(std::is_sorted(list.begin(), list.end(), [](const auto& a, const auto& b){
+		return (a.value * 10000) + a.order < (b.value * 10000) + b.order;
+	}));
 }
 
 //////

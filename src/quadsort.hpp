@@ -344,8 +344,8 @@ void parity_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compar
 	{
 		while (--left)
 		{
-			*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
-			*tpd-- = scandum_greater(cmp, *tpl, *tpr) ? *tpl-- : *tpr--;
+			*ptd++ = scandum_move(scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++);
+			*tpd-- = scandum_move(scandum_greater(cmp, *tpl, *tpr) ? *tpl-- : *tpr--);
 		}
 	}
 	else
@@ -703,8 +703,8 @@ void cross_merge(OutputIt dest, InputIt from, size_t left, size_t right, Compare
 		{
 			loop = 8; do
 			{
-				*ptd++ = scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++;
-				*tpd-- = scandum_greater(cmp, *tpl, *tpr) ? *tpl-- : *tpr--;
+				*ptd++ = scandum_move(scandum_not_greater(cmp, *ptl, *ptr) ? *ptl++ : *ptr++);
+				*tpd-- = scandum_move(scandum_greater(cmp, *tpl, *tpr) ? *tpl-- : *tpr--);
 			} while (--loop);
 		}
 		else

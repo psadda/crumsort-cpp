@@ -7,8 +7,8 @@
 #include <math.h>
 
 #ifdef _WIN32
-#	define WIN32_LEAN_AND_MEAN
-#	define NOMINMAX
+#	define WIN32_LEAN_AND_MEAN 1
+#	define NOMINMAX 1
 #	include <windows.h>
 #	include <profileapi.h> // for QueryPerformanceFrequency and QueryPerformanceCounter
 #else
@@ -30,7 +30,9 @@ const char *sorts[] = {
 	"pdqsort",
 	"rhsort",
 	"skasort",
-	"timsort"
+	"timsort",
+	"simdsort",
+	"vqsort"
 };
 
 //#define SKIP_STRINGS
@@ -50,13 +52,19 @@ const char *sorts[] = {
 #define RHSORT_C
 extern "C" void rhsort32(int* array, size_t n);
 
-#include <pdqsort.h>
 #define SKASORT_HPP
-
 #include <ska_sort.hpp>
-#include <timsort.hpp>
 
+#include <pdqsort.h>
+#include <timsort.hpp>
 #include <algorithm>
+
+#if USE_X86SIMDSORT
+#include <x86simdsort-static-incl.h>
+#endif
+#if USE_VQSORT
+#include <hwy/contrib/sort/vqsort.h>
+#endif
 
 typedef void SRTFUNC(void *array, size_t nmemb, size_t size, CMPFUNC *cmpf);
 
@@ -66,9 +74,9 @@ typedef void SRTFUNC(void *array, size_t nmemb, size_t size, CMPFUNC *cmpf);
 
 size_t comparisons;
 
-#define COMPARISON_PP comparisons++
+#define COMPARISON_PP //comparisons++
 
-#define NO_INLINE __attribute__ ((noinline))
+#define NO_INLINE //__attribute__ ((noinline))
 
 // primitive type comparison functions
 
@@ -288,6 +296,12 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 #ifdef SCANDUM_QUADSORT_HPP
 				case 'c' + 'x' * 32 + 'q' * 1024: if (size == sizeof(int)) scandum::quadsort(pta, pta + max); else if (size == sizeof(long long)) scandum::quadsort(ptla, ptla + max); else scandum::quadsort(ptda, ptda + max); break;
 #endif
+#ifdef X86_SIMD_SORT_STATIC_METHODS
+				case 's' + 'i' * 32 + 'm' * 1024: if (size == sizeof(int)) avx2_qsort(pta, max); else if (size == sizeof(long long)) avx2_qsort(ptla, max); else avx2_qsort(ptda, max, true); break;
+#endif
+#ifdef HIGHWAY_HWY_CONTRIB_SORT_VQSORT_H_
+				case 'v' + 'q' * 32 + 's' * 1024: if (size == sizeof(int32_t)) hwy::VQSort((int32_t*)pta, max, hwy::SortAscending()); else if (size == sizeof(int64_t)) hwy::VQSort((int64_t*)pta, max, hwy::SortAscending()); else hwy::VQSort((double*)pta, max, hwy::SortAscending()); break;
+#endif
 #ifdef BLITSORT_H
 				case 'b' + 'l' * 32 + 'i' * 1024: blitsort(array, max, size, cmpf); break;
 #endif
@@ -343,20 +357,8 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 				case 't' + 'i' * 32 + 'm' * 1024: if (size == sizeof(int)) gfx::timsort(pta, pta + max, cpp_cmp_int); else if (size == sizeof(long long)) gfx::timsort(ptla, ptla + max); else gfx::timsort(ptda, ptda + max); break;
 #endif
 				default:
-					switch (name32)
-					{
-						case 's' + 'o' * 32 + 'r' * 1024:
-						case 's' + 't' * 32 + 'a' * 1024:
-						case 'p' + 'd' * 32 + 'q' * 1024: 
-						case 'r' + 'h' * 32 + 's' * 1024:
-						case 's' + 'k' * 32 + 'a' * 1024:
-						case 't' + 'i' * 32 + 'm' * 1024:
-							printf("unknown sort: %s (compile with g++ instead of gcc?)\n", name);
-							return;
-						default:
-							printf("unknown sort: %s\n", name);
-							return;
-					}
+					printf("unknown sort: %s\n", name);
+					return;
 			}
 			average_comp += comparisons;
 
@@ -753,8 +755,8 @@ void range_test(int max, int samples, int repetitions, int seed)
 
 int main(int argc, char **argv)
 {
-	int max = 100000;
-	int samples = 10;
+	int max = 10000;
+	int samples = 1000;
 	int repetitions = 1;
 	int seed = 0;
 	int cnt, mem;

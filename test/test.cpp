@@ -257,8 +257,8 @@ static_assert (std::is_move_constructible_v<NoTrivialMove>);
 static_assert (std::is_move_assignable_v<NoTrivialMove>);
 
 TEST_CASE("crumsort sorts types that are nontrivially movable") {
-	std::vector<NoTrivialCopy> list;
-	for (int i = 0; i < 100; ++i) list.push_back(NoTrivialCopy(RandomInt()));
+	std::vector<NoTrivialMove> list;
+	for (int i = 0; i < 100; ++i) list.push_back(NoTrivialMove(RandomInt()));
 
 	scandum::crumsort(list.begin(), list.end());
 
@@ -266,8 +266,8 @@ TEST_CASE("crumsort sorts types that are nontrivially movable") {
 }
 
 TEST_CASE("quadsort sorts types that are nontrivially movable") {
-	std::vector<NoTrivialCopy> list;
-	for (int i = 0; i < 100; ++i) list.push_back(NoTrivialCopy(RandomInt()));
+	std::vector<NoTrivialMove> list;
+	for (int i = 0; i < 100; ++i) list.push_back(NoTrivialMove(RandomInt()));
 
 	scandum::quadsort(list.begin(), list.end());
 

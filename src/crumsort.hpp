@@ -21,8 +21,6 @@
 
 #include "quadsort.hpp"
 
-#define CRUM_OUT   96
-
 // comparison functions
 
 #define scandum_greater(less, lhs, rhs) less(rhs, lhs)
@@ -35,6 +33,8 @@
 namespace scandum {
 
 namespace detail {
+
+constexpr int QUADSORT_THRESHOLD = 96;
 
 template<typename T, typename Iterator, typename Compare>
 void fulcrum_partition(Iterator array, swap_space<T>& swap, T* max, size_t nmemb, Compare cmp);
@@ -152,7 +152,6 @@ void crum_analyze(Iterator array, swap_space<T>& swap, size_t nmemb, Compare cmp
 #ifndef cmp
 	if (quad1 > QUAD_CACHE)
 	{
-//		asum = bsum = csum = dsum = 1;
 		goto quad_cache;
 	}
 #endif
@@ -323,7 +322,7 @@ Iterator crum_median_of_nine(Iterator array, size_t nmemb, Compare cmp)
 }
 
 template<typename T, typename Iterator, typename Compare>
-size_t fulcrum_default_partition(Iterator array, swap_space<T>& swap, Iterator ptx, T* piv, size_t nmemb, Compare cmp)
+size_t fulcrum_default_partition(Iterator array, swap_space<T>& swap, T* piv, size_t nmemb, Compare cmp)
 {
 	size_t i, cnt, val, m = 0;
 	Iterator ptl, ptr, pta, tpa;
@@ -398,7 +397,7 @@ size_t fulcrum_default_partition(Iterator array, swap_space<T>& swap, Iterator p
 // As per suggestion by Marshall Lochbaum to improve generic data handling by mimicking dual-pivot quicksort
 
 template<typename T, typename Iterator, typename Compare>
-size_t fulcrum_reverse_partition(Iterator array, swap_space<T>& swap, Iterator ptx, T* piv, size_t nmemb, Compare cmp)
+size_t fulcrum_reverse_partition(Iterator array, swap_space<T>& swap, T* piv, size_t nmemb, Compare cmp)
 {
 	size_t i, cnt, val, m = 0;
 	Iterator ptl, ptr, pta, tpa;
@@ -494,23 +493,23 @@ void fulcrum_partition(Iterator array, swap_space<T>& swap, T* max, size_t nmemb
 
 		if (max && scandum_not_greater(cmp, *max, piv))
 		{
-			a_size = fulcrum_reverse_partition<T>(array, swap, array, &(T&)piv, nmemb, cmp);
+			a_size = fulcrum_reverse_partition<T>(array, swap, &(T&)piv, nmemb, cmp);
 			s_size = nmemb - a_size;
 			nmemb = a_size;
 
-			if (s_size <= a_size / 32 || a_size <= CRUM_OUT) break;
+			if (s_size <= a_size / 32 || a_size <= QUADSORT_THRESHOLD) break;
 
 			max = nullptr;
 			continue;
 		}
 		*ptp = scandum_move(array[--nmemb]);
 
-		a_size = fulcrum_default_partition<T>(array, swap, array, &(T&)piv, nmemb, cmp);
+		a_size = fulcrum_default_partition<T>(array, swap, &(T&)piv, nmemb, cmp);
 		s_size = nmemb - a_size;
 
 		ptp = array + a_size; array[nmemb] = scandum_move(*ptp); *ptp = scandum_move(piv);
 
-		if (a_size <= s_size / 32 || s_size <= CRUM_OUT)
+		if (a_size <= s_size / 32 || s_size <= QUADSORT_THRESHOLD)
 		{
 			quadsort_swap<T>(ptp + 1, swap, s_size, cmp);
 		}
@@ -520,15 +519,15 @@ void fulcrum_partition(Iterator array, swap_space<T>& swap, T* max, size_t nmemb
 		}
 		nmemb = a_size;
 
-		if (s_size <= a_size / 32 || a_size <= CRUM_OUT)
+		if (s_size <= a_size / 32 || a_size <= QUADSORT_THRESHOLD)
 		{
-			if (a_size <= CRUM_OUT) break;
+			if (a_size <= QUADSORT_THRESHOLD) break;
 
-			a_size = fulcrum_reverse_partition<T>(array, swap, array, &(T&)piv, nmemb, cmp);
+			a_size = fulcrum_reverse_partition<T>(array, swap, &(T&)piv, nmemb, cmp);
 			s_size = nmemb - a_size;
 			nmemb = a_size;
 
-			if (s_size <= a_size / 32 || a_size <= CRUM_OUT) break;
+			if (s_size <= a_size / 32 || a_size <= QUADSORT_THRESHOLD) break;
 
 			max = nullptr;
 			continue;

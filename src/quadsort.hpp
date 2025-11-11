@@ -3,6 +3,15 @@
 
 // quadsort 1.2.1.3 - Igor van den Hoven ivdhoven@gmail.com
 
+// When sorting an array of pointers, like a string array, the QUAD_CACHE needs
+// to be set for proper performance when sorting large arrays.
+// crumsort_prim() can be used to sort arrays of 32 and 64 bit integers
+// without a comparison function or cache restrictions.
+
+// With a 6 MB L3 cache a value of 262144 works well.
+
+#define QUAD_CACHE 262144
+
 #include <algorithm>   // for std::copy and std::copy_backward
 #include <cassert>
 #include <optional>

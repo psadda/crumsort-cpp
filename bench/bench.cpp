@@ -9,8 +9,7 @@
 #ifdef _WIN32
 #	define WIN32_LEAN_AND_MEAN 1
 #	define NOMINMAX 1
-#	include <windows.h>
-#	include <profileapi.h> // for QueryPerformanceFrequency and QueryPerformanceCounter
+#	include <windows.h> // for QueryPerformanceFrequency and QueryPerformanceCounter
 #else
 #	include <time.h>       // for clock_getres and clock_gettime
 #endif
@@ -42,15 +41,14 @@ const char *sorts[] = {
 #include <crumsort.hpp>
 #include <quadsort.hpp>
 
-#define BLITSORT_H
-#define CRUMSORT_H
-#define FLUXSORT_H
-#define GRIDSORT_H
-#define QUADSORT_H
-#include "scandum_sorts.h"
+#include "blitsort.h"
+#include "crumsort.h"
+#include "fluxsort.h"
+#include "gridsort.h"
+#include "quadsort.h"
 
 #define RHSORT_C
-extern "C" void rhsort32(int* array, size_t n);
+#include "rhsort.c"
 
 #define SKASORT_HPP
 #include <ska_sort.hpp>
@@ -270,7 +268,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 	if (minimum == 7 && maximum == 7)
 	{
 		pta = (int *) unsorted;
-		printf("\e[1;32m%10d %10d %10d %10d %10d %10d %10d\e[0m\n", pta[0], pta[1], pta[2], pta[3], pta[4], pta[5], pta[6]);
+		printf("\x1B[1;32m%10d %10d %10d %10d %10d %10d %10d\x1B[0m\n", pta[0], pta[1], pta[2], pta[3], pta[4], pta[5], pta[6]);
 		pta = (int *) array;
 	}
 
@@ -380,7 +378,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 
 	if (minimum == 7 && maximum == 7)
 	{
-		printf("\e[1;32m%10d %10d %10d %10d %10d %10d %10d\e[0m\n", pta[0], pta[1], pta[2], pta[3], pta[4], pta[5], pta[6]);
+		printf("\x1B[1;32m%10d %10d %10d %10d %10d %10d %10d\x1B[0m\n", pta[0], pta[1], pta[2], pta[3], pta[4], pta[5], pta[6]);
 	}
 
 	if (repetitions == 0)
@@ -396,7 +394,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 		{
 			if (pta[cnt - 1] > pta[cnt])
 			{
-				sprintf(temp, "\e[1;31m%16s\e[0m", "unstable");
+				sprintf(temp, "\x1B[1;31m%16s\x1B[0m", "unstable");
 				desc = temp;
 				break;
 			}
@@ -407,16 +405,16 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 	{
 		if (repetitions <= 1)
 		{
-			printf("|%10s |%9d | %4d | %8.1f | %8.1f |%10d | %7d | %16s |\e[0m\n", name, maximum, (int) size * 8, best / double(maximum), average_time / double(maximum), (int)comparisons, samples, desc);
+			printf("|%10s |%9d | %4d | %8.1f | %8.1f |%10d | %7d | %16s |\x1B[0m\n", name, maximum, (int) size * 8, best / double(maximum), average_time / double(maximum), (int)comparisons, samples, desc);
 		}
 		else
 		{
-			printf("|%10s |%9d | %4d | %8.1f | %8.1f |%10.1f | %7d | %16s |\e[0m\n", name, maximum, (int) size * 8, best / double(maximum), average_time / double(maximum), (float)average_comp / repetitions, samples, desc);
+			printf("|%10s |%9d | %4d | %8.1f | %8.1f |%10.1f | %7d | %16s |\x1B[0m\n", name, maximum, (int) size * 8, best / double(maximum), average_time / double(maximum), (float)average_comp / repetitions, samples, desc);
 		}
 	}
 	else
 	{
-		printf("|%10s | %8d | %4d | %f | %f | %9d | %7d | %16s |\e[0m\n", name, maximum, (int) size * 8, best / double(maximum), average_time / double(maximum), repetitions, samples, desc);
+		printf("|%10s | %8d | %4d | %f | %f | %9d | %7d | %16s |\x1B[0m\n", name, maximum, (int) size * 8, best / double(maximum), average_time / double(maximum), repetitions, samples, desc);
 	}
 
 	if (minimum != maximum || cmpf == cmp_stable)
@@ -510,7 +508,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 					char **ptsa = (char **) array;
 					char **ptsv = (char **) valid;
 
-					printf("         validate: array[%d] != valid[%d]. (%s vs %s) %s\n", cnt, cnt, (char *) ptsa[cnt], (char *) ptsv[cnt], !strcmp((char *) ptsa[cnt], (char *) ptsv[cnt]) ? "\e[1;31munstable\e[0m" : "");
+					printf("         validate: array[%d] != valid[%d]. (%s vs %s) %s\n", cnt, cnt, (char *) ptsa[cnt], (char *) ptsv[cnt], !strcmp((char *) ptsa[cnt], (char *) ptsv[cnt]) ? "\x1B[1;31munstable\x1B[0m" : "");
 					break;
 				}
 				if (cmpf == cmp_long_ptr)
@@ -518,7 +516,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 					long long **ptla = (long long **) array;
 					long long **ptlv = (long long **) valid;
 
-					printf("         validate: array[%d] != valid[%d]. (%lld vs %lld) %s\n", cnt, cnt, *ptla[cnt], *ptlv[cnt], (*ptla[cnt] == *ptlv[cnt]) ? "\e[1;31munstable\e[0m" : "");
+					printf("         validate: array[%d] != valid[%d]. (%lld vs %lld) %s\n", cnt, cnt, *ptla[cnt], *ptlv[cnt], (*ptla[cnt] == *ptlv[cnt]) ? "\x1B[1;31munstable\x1B[0m" : "");
 					break;
 				}
 				if (cmpf == cmp_int_ptr)
@@ -526,7 +524,7 @@ void test_sort(void *array, void *unsorted, void *valid, int minimum, int maximu
 					int **ptia = (int **) array;
 					int **ptiv = (int **) valid;
 
-					printf("         validate: array[%d] != valid[%d]. (%d vs %d) %s\n", cnt, cnt, *ptia[cnt], *ptiv[cnt], (*ptia[cnt] == *ptiv[cnt]) ? "\e[1;31munstable\e[0m" : "");
+					printf("         validate: array[%d] != valid[%d]. (%d vs %d) %s\n", cnt, cnt, *ptia[cnt], *ptiv[cnt], (*ptia[cnt] == *ptiv[cnt]) ? "\x1B[1;31munstable\x1B[0m" : "");
 					break;
 				}
 
@@ -570,8 +568,8 @@ void validate()
 
 		for (val = 0 ; val < cnt ; val++)
 		{
-			if (val && v_array[val - 1] > v_array[val]) {printf("\e[1;31mvalidate rand: seed %d: size: %d Not properly sorted at index %d.\n", seed, cnt, val); return;}
-			if (a_array[val] != v_array[val])           {printf("\e[1;31mvalidate rand: seed %d: size: %d Not verified at index %d.\n", seed, cnt, val); return;}
+			if (val && v_array[val - 1] > v_array[val]) {printf("\x1B[1;31mvalidate rand: seed %d: size: %d Not properly sorted at index %d.\n", seed, cnt, val); return;}
+			if (a_array[val] != v_array[val])           {printf("\x1B[1;31mvalidate rand: seed %d: size: %d Not verified at index %d.\n", seed, cnt, val); return;}
 		}
 	}
 
@@ -589,8 +587,8 @@ void validate()
 
 		for (val = 0 ; val < cnt ; val++)
 		{
-			if (val && v_array[val - 1] > v_array[val]) {printf("\e[1;31mvalidate ascending saw: seed %d: size: %d Not properly sorted at index %d.\n", seed, cnt, val); return;}
-			if (a_array[val] != v_array[val])           {printf("\e[1;31mvalidate ascending saw: seed %d: size: %d Not verified at index %d.\n", seed, cnt, val); return;}
+			if (val && v_array[val - 1] > v_array[val]) {printf("\x1B[1;31mvalidate ascending saw: seed %d: size: %d Not properly sorted at index %d.\n", seed, cnt, val); return;}
+			if (a_array[val] != v_array[val])           {printf("\x1B[1;31mvalidate ascending saw: seed %d: size: %d Not verified at index %d.\n", seed, cnt, val); return;}
 		}
 	}
 
@@ -611,8 +609,8 @@ void validate()
 
 		for (val = 0 ; val < cnt ; val++)
 		{
-			if (val && v_array[val - 1] > v_array[val]) {printf("\e[1;31mvalidate descending saw: seed %d: size: %d Not properly sorted at index %d.\n\n", seed, cnt, val); return;}
-			if (a_array[val] != v_array[val])           {printf("\e[1;31mvalidate descending saw: seed %d: size: %d Not verified at index %d.\n\n", seed, cnt, val); return;}
+			if (val && v_array[val - 1] > v_array[val]) {printf("\x1B[1;31mvalidate descending saw: seed %d: size: %d Not properly sorted at index %d.\n\n", seed, cnt, val); return;}
+			if (a_array[val] != v_array[val])           {printf("\x1B[1;31mvalidate descending saw: seed %d: size: %d Not verified at index %d.\n\n", seed, cnt, val); return;}
 		}
 	}
 
@@ -630,8 +628,8 @@ void validate()
 
 		for (val = 0 ; val < cnt ; val++)
 		{
-			if (val && v_array[val - 1] > v_array[val]) {printf("\e[1;31mvalidate rand tail: seed %d: size: %d Not properly sorted at index %d.\n", seed, cnt, val); return;}
-			if (a_array[val] != v_array[val])           {printf("\e[1;31mvalidate rand tail: seed %d: size: %d Not verified at index %d.\n", seed, cnt, val); return;}
+			if (val && v_array[val - 1] > v_array[val]) {printf("\x1B[1;31mvalidate rand tail: seed %d: size: %d Not properly sorted at index %d.\n", seed, cnt, val); return;}
+			if (a_array[val] != v_array[val])           {printf("\x1B[1;31mvalidate rand tail: seed %d: size: %d Not verified at index %d.\n", seed, cnt, val); return;}
 		}
 	}
 	free(a_array);

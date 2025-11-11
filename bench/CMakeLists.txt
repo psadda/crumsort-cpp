@@ -2,7 +2,7 @@ include(FetchContent)
 
 file(DOWNLOAD https://raw.githubusercontent.com/orlp/pdqsort/master/pdqsort.h
 	${CMAKE_CURRENT_BINARY_DIR}/pdqsort.h)
-file(DOWNLOAD https://raw.githubusercontent.com/mlochbaum/rhsort/master/rhsort.c
+file(DOWNLOAD https://raw.githubusercontent.com/psadda/rhsort/master/rhsort.c
 	${CMAKE_CURRENT_BINARY_DIR}/rhsort.c)
 file(DOWNLOAD https://raw.githubusercontent.com/skarupke/ska_sort/master/ska_sort.hpp
 	${CMAKE_CURRENT_BINARY_DIR}/ska_sort.hpp)
@@ -28,17 +28,13 @@ if(CRUMSORT_CPP_BENCH_WITH_VQSORT)
 	list(APPEND BENCH_DEFS USE_VQSORT)
 endif()
 
-FetchContent_Declare(wolfsort GIT_REPOSITORY https://github.com/scandum/wolfsort.git GIT_SHALLOW TRUE)
+FetchContent_Declare(wolfsort GIT_REPOSITORY https://github.com/psadda/wolfsort.git GIT_SHALLOW TRUE)
 list(APPEND BENCH_REMOTE_MODULES wolfsort)
 list(APPEND BENCH_INCLUDE_DIRS ${FETCHCONTENT_BASE_DIR}/wolfsort-src/src)
 
 FetchContent_MakeAvailable(${BENCH_REMOTE_MODULES})
 
-add_executable(benchmarks
-	bench.cpp
-	scandum_sorts.h
-	scandum_sorts.c
-	${CMAKE_CURRENT_BINARY_DIR}/rhsort.c)
+add_executable(benchmarks bench.cpp)
 
 target_include_directories(benchmarks PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${BENCH_INCLUDE_DIRS})
 target_link_libraries(benchmarks crumsortcpp ${BENCH_LIBS})

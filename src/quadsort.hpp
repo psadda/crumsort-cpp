@@ -50,7 +50,7 @@
 
 // utilize branchless ternary operations in clang
 
-#if !defined __clang__
+#if !defined __clang__ && !defined _MSC_VER
 #define scandum_head_branchless_merge(ptd, x, ptl, ptr, cmp)  \
 	x = scandum_not_greater(cmp, *ptl, *ptr);  \
 	*ptd = scandum_move(*ptl);  \
@@ -63,7 +63,7 @@
 	*ptd++ = scandum_move(scandum_not_greater(cmp, *ptl, *ptr) ? (T&)*ptl++ : (T&)*ptr++);
 #endif
 
-#if !defined __clang__
+#if !defined __clang__ && !defined _MSC_VER
 #define scandum_tail_branchless_merge(tpd, y, tpl, tpr, cmp)  \
 	y = scandum_not_greater(cmp, *tpl, *tpr);  \
 	*tpd = scandum_move(*tpl);  \
